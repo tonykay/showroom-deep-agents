@@ -2,20 +2,20 @@
 
 Before you can build agentic systems with Deep Agents, you need to prepare your development environment. This guide will walk you through installing Python, the `uv` package manager, and the Deep Agents library.
 
-== Install Python 3.13+
+== Check your Python version
 
-Deep Agents requires Python 3.13 or later. Verify your Python version:
+Deep Agents requires Python 3.13 or later. Check what you have:
 
 [source,role="execute"]
 ----
 python3 --version
 ----
 
-If you need to install or upgrade Python, consider using https://github.com/pyenv/pyenv[pyenv] (on macOS/Linux) or https://brew.sh[Homebrew] (macOS: `brew install python@3.13`).
+Don't worry if your system Python is older -- in the next section you'll install `uv`, which can download and manage Python 3.13 for your project automatically without touching your system installation.
 
 == Install uv
 
-https://github.com/astral-sh/uv[uv] is a fast Python package manager that simplifies dependency management. Install it with:
+https://github.com/astral-sh/uv[uv] is a fast Python package and project manager from Astral. It handles dependency management, virtual environments, and -- crucially for this workshop -- **Python version management** per project, so you never need to change your system Python. Install it with:
 
 [source,role="execute"]
 ----
@@ -29,18 +29,31 @@ Verify the installation:
 uv --version
 ----
 
+You should see version **0.6.x or later**. If you have an older version, re-run the install script above to upgrade.
+
 == Create your workshop project
 
-Initialize a new Python project and install Deep Agents:
+Initialize a new project pinned to Python 3.13. Even if your system Python is an older version, `uv` will automatically download and manage Python 3.13 for this project:
 
 [source,role="execute"]
 ----
-uv init deep-agents-workshop
+uv init --python 3.13 deep-agents-workshop
 cd deep-agents-workshop
 uv add deepagents
 ----
 
-This creates a project directory with a `pyproject.toml` file and installs the Deep Agents library along with its dependencies.
+This creates an isolated project directory with its own `pyproject.toml`, `.python-version` file (pinned to 3.13), and virtual environment. Your system Python is untouched -- `uv` downloads and caches the correct Python version automatically.
+
+You can verify which Python the project is using:
+
+[source,role="execute"]
+----
+uv run python --version
+----
+
+This should show `Python 3.13.x` regardless of what `python3 --version` reports system-wide.
+
+TIP: This per-project Python management is one of the key reasons we use `uv` throughout this workshop. Each project gets exactly the Python version it needs, and you can have multiple projects using different versions side by side.
 
 == Set your API key
 
@@ -114,17 +127,15 @@ This launches a browser-based interface that mirrors the online Showroom experie
 
 === Python version too old
 
-If `python3 --version` shows a version older than 3.13, you'll need to upgrade. Use pyenv or your system package manager:
+If `uv run python --version` inside your project still shows an older version, ensure you created the project with the `--python 3.13` flag. You can fix an existing project by running:
 
-[source,python]
+[source,role="execute"]
 ----
-# Using pyenv
-pyenv install 3.13
-pyenv global 3.13
+uv python pin 3.13
+uv sync
+----
 
-# Using Homebrew (macOS)
-brew install python@3.13
-----
+This tells `uv` to download Python 3.13 and recreate the virtual environment. Your system Python remains unchanged.
 
 === API key not set
 
