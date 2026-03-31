@@ -59,8 +59,10 @@ Use memory for context that should influence every interaction: coding standards
 cat > test_memory.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     memory=["./AGENTS.md"],
 )
 
@@ -101,8 +103,10 @@ Agents can modify their own AGENTS.md to learn and persist knowledge across conv
 cat > update_memory.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     memory=["./AGENTS.md"],
 )
 
@@ -192,8 +196,10 @@ EOF
 cat > layered_memory.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     memory=["./AGENTS.md", "~/.deepagents/AGENTS.md"],
 )
 
@@ -252,17 +258,20 @@ Memory sits near the bottom of the stack because it shapes the system prompt tha
 cat > full_stack.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+FAST_MODEL = "anthropic:claude-haiku-4-5-20251001"
+
 subagents = [
     {
         "name": "researcher",
         "description": "Research topics and gather information.",
         "system_prompt": "You are a research assistant.",
-        "model": "anthropic:claude-haiku-4-5-20251001",
+        "model": FAST_MODEL,
     }
 ]
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     memory=["./AGENTS.md"],
     skills=["./skills/"],
     subagents=subagents,
@@ -330,6 +339,8 @@ export OPENAI_API_KEY=your-key-here
 cat > multi_provider.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 subagents = [
     {
         "name": "researcher",
@@ -341,12 +352,12 @@ subagents = [
         "name": "analyst",
         "description": "Deep analysis requiring careful reasoning.",
         "system_prompt": "You are an analytical expert.",
-        "model": "anthropic:claude-sonnet-4-6",
+        "model": MODEL,
     },
 ]
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     memory=["./AGENTS.md"],
     subagents=subagents,
 )
