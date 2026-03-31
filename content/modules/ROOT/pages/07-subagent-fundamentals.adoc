@@ -37,6 +37,8 @@ Let's define and use a research subagent.
 cat > research_demo.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 researcher = {
     "name": "researcher",
     "description": "Use this subagent to research topics and gather information. It focuses on finding facts and summarizing them clearly.",
@@ -48,7 +50,7 @@ researcher = {
 }
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[researcher],
 )
 
@@ -99,6 +101,8 @@ When you give subagents to a main agent, it receives a `task` tool under the hoo
 cat > inspect_delegation.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 researcher = {
     "name": "researcher",
     "description": "Use this subagent to research topics and gather information. It focuses on finding facts and summarizing them clearly.",
@@ -110,7 +114,7 @@ researcher = {
 }
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[researcher],
 )
 
@@ -163,6 +167,8 @@ The `description` field is not just documentation—it's the primary routing mec
 cat > routing_demo.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 fact_finder = {
     "name": "fact_finder",
     "description": "Use this subagent to find quick facts, definitions, and basic information. Best for straightforward lookups.",
@@ -176,7 +182,7 @@ deep_analyst = {
 }
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[fact_finder, deep_analyst],
 )
 
@@ -228,6 +234,8 @@ The simple factual question routes to `fact_finder`. The complex decision routes
 cat > routing_demo2.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 fact_finder = {
     "name": "fact_finder",
     "description": "Use this subagent for ANY API-related questions, whether simple or complex.",
@@ -241,7 +249,7 @@ deep_analyst = {
 }
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[fact_finder, deep_analyst],
 )
 
@@ -285,22 +293,25 @@ Different tasks need different models. Research might work fine with a fast, che
 cat > model_routing.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+FAST_MODEL = "anthropic:claude-haiku-4-5-20251001"
+
 researcher = {
     "name": "researcher",
     "description": "Research topics and gather factual information.",
     "system_prompt": "You are a research assistant. Provide clear, organized facts.",
-    "model": "anthropic:claude-haiku-4-5-20251001",
+    "model": FAST_MODEL,
 }
 
 analyst = {
     "name": "analyst",
     "description": "Perform deep analysis requiring careful reasoning.",
     "system_prompt": "You are an analytical expert. Consider multiple angles, evaluate trade-offs, and provide thorough reasoning.",
-    "model": "anthropic:claude-sonnet-4-6",
+    "model": MODEL,
 }
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[researcher, analyst],
 )
 
@@ -350,9 +361,11 @@ This is useful when you want context isolation without specialization—just a f
 cat > default_subagent.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 # No subagents defined
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=[],  # Empty list
 )
 

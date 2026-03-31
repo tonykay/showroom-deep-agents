@@ -15,13 +15,15 @@ cat > simple_tool.py << 'EOF'
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 @tool
 def word_count(text: str) -> int:
     """Count the number of words in the given text."""
     return len(text.split())
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     tools=[word_count],
 )
 
@@ -61,6 +63,8 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 class CodeAnalysisInput(BaseModel):
     code: str = Field(description="The Python code to analyze")
     check_types: bool = Field(default=True, description="Whether to check for type hints")
@@ -79,7 +83,7 @@ def analyze_code(code: str, check_types: bool = True, check_docstrings: bool = T
     return "Issues found: " + ", ".join(issues)
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     tools=[analyze_code],
 )
 
@@ -154,6 +158,8 @@ cat > multiple_tools.py << 'EOF'
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 @tool
 def word_count(text: str) -> int:
     """Count the number of words in the given text."""
@@ -174,7 +180,7 @@ def calculate(expression: str) -> str:
     return str(eval(expression))
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     tools=[word_count, get_timestamp, calculate],
 )
 
@@ -225,6 +231,8 @@ cat > interrupt_tool.py << 'EOF'
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 @tool
 def word_count(text: str) -> int:
     """Count the number of words in the given text."""
@@ -239,7 +247,7 @@ def calculate(expression: str) -> str:
     return str(eval(expression))
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     tools=[word_count, calculate],
     interrupt_on={"calculate": True},
 )
