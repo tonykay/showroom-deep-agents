@@ -1,56 +1,97 @@
 = Environment Setup
 
-Before you can build agentic systems with Deep Agents, you need to prepare your development environment. This guide will walk you through installing Python, the `uv` package manager, and the Deep Agents library.
+Before you can build agentic systems with Deep Agents, you need to prepare your development environment. This guide walks you through installing Python, the `uv` package manager, and the Deep Agents library.
 
 == Check your Python version
 
-Deep Agents requires Python 3.13 or later. Check what you have:
-
+. Check what Python version you currently have:
++
 [source,role="execute"]
 ----
 python3 --version
 ----
-
-Don't worry if your system Python is older -- in the next section you'll install `uv`, which can download and manage Python 3.13 for your project automatically without touching your system installation.
++
+.Sample output
+----
+Python 3.12.4
+----
++
+Don't worry if your system Python is older than 3.13 -- in the next section you'll install `uv`, which can download and manage Python 3.13 for your project automatically without touching your system installation.
 
 == Install uv
 
-https://github.com/astral-sh/uv[uv] is a fast Python package and project manager from Astral. It handles dependency management, virtual environments, and -- crucially for this workshop -- **Python version management** per project, so you never need to change your system Python. Install it with:
+https://github.com/astral-sh/uv[uv] is a fast Python package and project manager from Astral. It handles dependency management, virtual environments, and -- crucially for this workshop -- **Python version management** per project, so you never need to change your system Python.
 
+. Install `uv`:
++
 [source,role="execute"]
 ----
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ----
++
+.Sample output
+----
+downloading uv 0.6.14 (aarch64-apple-darwin)
+installing to /Users/you/.local/bin
+  uv
+  uvx
+everything's installed!
+----
 
-Verify the installation:
-
+. Verify the installation:
++
 [source,role="execute"]
 ----
 uv --version
 ----
-
++
+.Sample output
+----
+uv 0.6.14
+----
++
 You should see version **0.6.x or later**. If you have an older version, re-run the install script above to upgrade.
 
 == Create your workshop project
 
-Initialize a new project pinned to Python 3.13. Even if your system Python is an older version, `uv` will automatically download and manage Python 3.13 for this project:
+Initialize a new project pinned to Python 3.13. Even if your system Python is an older version, `uv` will automatically download and manage Python 3.13 for this project.
 
+. Create the project and add Deep Agents:
++
 [source,role="execute"]
 ----
 uv init --python 3.13 deep-agents-workshop
 cd deep-agents-workshop
 uv add deepagents
 ----
-
++
+.Sample output
+----
+Initialized project `deep-agents-workshop` at `/home/you/deep-agents-workshop`
+Using CPython 3.13.2
+Creating virtual environment at: .venv
+Resolved 12 packages in 3.21s
+...
+Installed 12 packages in 156ms
+ + deepagents==0.2.1
+ + langchain-core==0.3.51
+ + langgraph==0.4.1
+----
++
 This creates an isolated project directory with its own `pyproject.toml`, `.python-version` file (pinned to 3.13), and virtual environment. Your system Python is untouched -- `uv` downloads and caches the correct Python version automatically.
 
-You can verify which Python the project is using:
-
+. Verify which Python the project is using:
++
 [source,role="execute"]
 ----
 uv run python --version
 ----
-
++
+.Sample output
+----
+Python 3.13.2
+----
++
 This should show `Python 3.13.x` regardless of what `python3 --version` reports system-wide.
 
 TIP: This per-project Python management is one of the key reasons we use `uv` throughout this workshop. Each project gets exactly the Python version it needs, and you can have multiple projects using different versions side by side.
@@ -59,19 +100,21 @@ TIP: This per-project Python management is one of the key reasons we use `uv` th
 
 Deep Agents uses Claude as its reasoning engine. You'll need an Anthropic API key to run the examples in this workshop.
 
+. Set your API key as an environment variable:
++
 [source,role="execute"]
 ----
 export ANTHROPIC_API_KEY="your-key-here"
 ----
-
++
 You can obtain an API key from https://console.anthropic.com[console.anthropic.com]. Navigate to "API Keys" in your account settings and create a new key.
 
 NOTE: You'll need this API key set for all modules in this workshop. Consider adding it to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) to persist it across sessions.
 
 == Validate your setup
 
-Create and run a simple validation script to confirm everything is working:
-
+. Create and run a validation script to confirm everything is working:
++
 [source,role="execute"]
 ----
 cat > validate_setup.py << 'EOF'
@@ -83,78 +126,100 @@ print(f"Agent type: {type(agent).__name__}")
 EOF
 uv run python validate_setup.py
 ----
-
-Expected output:
-
-[source,python]
++
+.Expected output
 ----
 Deep Agents installed successfully!
 Agent type: CompiledStateGraph
 ----
-
-If you see this output, your environment is ready for the workshop!
++
+If you see this output, your environment is ready for the workshop.
 
 == Install the Deep Agents CLI
 
-The Deep Agents CLI provides helpful commands for scaffolding projects and running agents. Install it with:
-
+. Install the CLI:
++
 [source,role="execute"]
 ----
 curl -LsSf https://raw.githubusercontent.com/langchain-ai/deepagents/main/libs/cli/scripts/install.sh | bash
 ----
++
+.Sample output
+----
+downloading deepagents-cli
+installing to /Users/you/.local/bin
+  deepagents
+installation complete!
+----
 
-Verify the installation:
-
+. Verify the installation:
++
 [source,role="execute"]
 ----
 deepagents --help
 ----
++
+.Sample output
+----
+Usage: deepagents [OPTIONS] [PROMPT]
 
-The CLI is optional but can accelerate your development workflow.
+  Deep Agents CLI - The batteries-included agent harness
+
+Options:
+  --model TEXT           Model to use (default: anthropic:claude-sonnet-4-6)
+  --system-prompt TEXT   Custom system prompt
+  --headless             Run without TUI
+  --help                 Show this message and exit
+----
 
 == Optional: Local Showroom experience
 
 If you prefer a full split-pane UI for this workshop (code editor + terminal + instructions), you can run the local Showroom environment:
 
+. Start the local Showroom:
++
 [source,role="execute"]
 ----
 ./localroom.sh start
 ----
-
-This launches a browser-based interface that mirrors the online Showroom experience.
++
+This launches a browser-based interface at http://localhost:8080 that mirrors the online Showroom experience.
 
 == Troubleshooting
 
 === Python version too old
 
-If `uv run python --version` inside your project still shows an older version, ensure you created the project with the `--python 3.13` flag. You can fix an existing project by running:
+If `uv run python --version` inside your project still shows an older version, ensure you created the project with the `--python 3.13` flag. You can fix an existing project:
 
+. Pin the Python version and resync:
++
 [source,role="execute"]
 ----
 uv python pin 3.13
 uv sync
 ----
-
++
 This tells `uv` to download Python 3.13 and recreate the virtual environment. Your system Python remains unchanged.
 
 === API key not set
 
-If you see authentication errors when running examples, ensure your `ANTHROPIC_API_KEY` environment variable is set:
+If you see authentication errors when running examples, check your `ANTHROPIC_API_KEY` environment variable:
 
+. Verify the key is set:
++
 [source,role="execute"]
 ----
 echo $ANTHROPIC_API_KEY
 ----
-
++
 If this prints an empty line, re-export your API key.
 
 === uv not on PATH
 
-After installing `uv`, you may need to restart your terminal or manually add it to your PATH. The installer typically adds it to `~/.cargo/bin`. Check your shell profile and add:
+After installing `uv`, you may need to restart your terminal or manually add it to your PATH. The installer typically adds it to `~/.local/bin`. Add this to your shell profile:
 
-[source,python]
 ----
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 ----
 
 Then restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
