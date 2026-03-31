@@ -71,6 +71,48 @@ Notice the eight tools listed in the output -- these are the four pillars in act
 * **Sub-agents** (`task`) -- Pillar 3
 * **Pillar 1** (the detailed system prompt) is what taught the agent how to describe and use all of these
 
+=== Choosing your model
+
+You'll notice every script in this workshop defines a `MODEL` constant at the top:
+
+[source,python]
+----
+MODEL = "anthropic:claude-sonnet-4-6"
+----
+
+Deep Agents uses a `"provider:model"` format that supports any LiteLLM-compatible provider. If you want to use a different model, just change this one line. Here are some examples:
+
+[cols="2,3",options="header"]
+|===
+|Provider |MODEL value
+
+|Anthropic (default)
+|`"anthropic:claude-sonnet-4-6"`
+
+|Anthropic (fast/cheap)
+|`"anthropic:claude-haiku-4-5-20251001"`
+
+|OpenAI
+|`"openai:gpt-4o"`
+
+|Ollama (local)
+|`"ollama:llama3.1:8b"`
+
+|Ollama (local, larger)
+|`"ollama:qwen2.5:32b"`
+|===
+
+For example, to run the entire workshop against a local Ollama model:
+
+[source,python]
+----
+MODEL = "ollama:llama3.1:8b"
+----
+
+TIP: If you're using Ollama, make sure it's running locally (`ollama serve`) and that you've pulled the model first (`ollama pull llama3.1:8b`). No API key is needed for local models. Be aware that smaller local models may struggle with complex tool-use tasks in later modules -- the exercises were designed and tested with Claude Sonnet.
+
+Throughout this workshop, we use Anthropic's Claude Sonnet as the default because it handles tool-calling and multi-step reasoning reliably. But because we extract `MODEL` as a constant, you can experiment with any provider at any time.
+
 == Exercise 2: Streaming Responses
 
 Most of the time, you'll want to see the agent's response as it's being generated, not all at once.
