@@ -113,7 +113,7 @@ NOTE: You'll need this API key set for all modules in this workshop. Consider ad
 
 == Validate your setup
 
-. Create and run a validation script to confirm everything is working:
+. Create a validation script:
 +
 [source,role="execute"]
 ----
@@ -124,6 +124,12 @@ agent = create_deep_agent()
 print("Deep Agents installed successfully!")
 print(f"Agent type: {type(agent).__name__}")
 EOF
+----
+
+. Run the validation script:
++
+[source,role="execute"]
+----
 uv run python validate_setup.py
 ----
 +
