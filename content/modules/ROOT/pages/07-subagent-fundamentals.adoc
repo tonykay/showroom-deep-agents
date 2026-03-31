@@ -30,8 +30,8 @@ This architecture keeps each piece of work sharp and focused, while the main age
 
 Let's define and use a research subagent.
 
-Create a new file:
-
+. Create a new file:
++
 [source,role="execute"]
 ----
 cat > research_demo.py << 'EOF'
@@ -61,11 +61,21 @@ print(result["messages"][-1].content)
 EOF
 ----
 
-Run it:
-
+. Run it:
++
 [source,role="execute"]
 ----
 python research_demo.py
+----
++
+.Sample output
+----
+Here are the key differences between REST and GraphQL APIs:
+
+**Data Fetching:**
+- REST: Multiple endpoints return fixed data structures
+- GraphQL: Single endpoint with flexible queries for exactly what you need
+...
 ----
 
 You'll see the main agent delegate to the researcher, which produces a focused, well-organized response.
@@ -82,8 +92,8 @@ The `subagents` parameter passes them to the main agent, which automatically get
 
 When you give subagents to a main agent, it receives a `task` tool under the hood. Let's observe it in action.
 
-Create a delegation inspector:
-
+. Create a delegation inspector:
++
 [source,role="execute"]
 ----
 cat > inspect_delegation.py << 'EOF'
@@ -120,16 +130,17 @@ for msg in result["messages"]:
 EOF
 ----
 
-Run it:
-
+. Run it:
++
 [source,role="execute"]
 ----
 python inspect_delegation.py
 ----
-
-You'll see output like:
-
++
+.Sample output
 ----
+=== Delegation Analysis ===
+
 Delegated to: researcher
 Task description: Research the key differences between REST and GraphQL APIs, focusing on their architec...
 ----
@@ -145,8 +156,8 @@ The subagent runs in its own context, returns the result as tool output, and the
 
 The `description` field is not just documentation—it's the primary routing mechanism. The main agent reads descriptions to decide which subagent to use.
 
-Let's create two subagents with overlapping capabilities but different descriptions:
-
+. Create two subagents with overlapping capabilities but different descriptions:
++
 [source,role="execute"]
 ----
 cat > routing_demo.py << 'EOF'
@@ -192,17 +203,26 @@ for msg in result2["messages"]:
 EOF
 ----
 
-Run it:
-
+. Run it:
++
 [source,role="execute"]
 ----
 python routing_demo.py
 ----
++
+.Sample output
+----
+=== Task 1: What is REST? ===
+Routed to: fact_finder
 
+=== Task 2: REST vs GraphQL decision ===
+Routed to: deep_analyst
+----
++
 The simple factual question routes to `fact_finder`. The complex decision routes to `deep_analyst`.
 
-Now change the descriptions and re-run:
-
+. Now change the descriptions and re-run:
++
 [source,role="execute"]
 ----
 cat > routing_demo2.py << 'EOF'
@@ -237,13 +257,19 @@ for msg in result["messages"]:
 EOF
 ----
 
-Run it:
-
+. Run the modified version:
++
 [source,role="execute"]
 ----
 python routing_demo2.py
 ----
-
++
+.Sample output
+----
+=== With changed descriptions ===
+Routed to: fact_finder
+----
++
 Now the same complex question routes to `fact_finder` because its description claims API expertise.
 
 Key lesson: Descriptions are routing signals. Write them carefully to guide delegation.
@@ -252,8 +278,8 @@ Key lesson: Descriptions are routing signals. Write them carefully to guide dele
 
 Different tasks need different models. Research might work fine with a fast, cheap model like Haiku. Deep reasoning might need Sonnet or Opus.
 
-You can specify a `model` per subagent:
-
+. Specify a `model` per subagent:
++
 [source,role="execute"]
 ----
 cat > model_routing.py << 'EOF'
@@ -290,11 +316,18 @@ print("Task 2 complete (routed to analyst/Sonnet)\n")
 EOF
 ----
 
-Run it:
-
+. Run it:
++
 [source,role="execute"]
 ----
 python model_routing.py
+----
++
+.Sample output
+----
+Task 1 complete (routed to researcher/Haiku)
+
+Task 2 complete (routed to analyst/Sonnet)
 ----
 
 This optimizes both cost and latency:
@@ -310,8 +343,8 @@ If you don't define a subagent named `general-purpose`, DeepAgents automatically
 
 This is useful when you want context isolation without specialization—just a fresh slate for a task.
 
-Let's see it in action:
-
+. Create a script to demonstrate the default subagent:
++
 [source,role="execute"]
 ----
 cat > default_subagent.py << 'EOF'
@@ -338,13 +371,23 @@ for msg in result["messages"]:
 EOF
 ----
 
-Run it:
-
+. Run it:
++
 [source,role="execute"]
 ----
 python default_subagent.py
 ----
++
+.Sample output
+----
+=== Result ===
+The factorial of 10 is 3,628,800. This represents the product of all positive
+integers from 1 to 10 (10 × 9 × 8 × 7 × 6 × 5 × 4 × 3 × 2 × 1).
 
+=== Delegation ===
+Routed to: general-purpose
+----
++
 Even though you didn't define any subagents, the main agent can delegate to `general-purpose`, which has the same tools and model but fresh context.
 
 This is a powerful pattern for breaking up long-running conversations without needing specialized subagents.
