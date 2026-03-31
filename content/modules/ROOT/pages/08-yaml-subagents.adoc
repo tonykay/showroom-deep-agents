@@ -179,7 +179,7 @@ EOF
 python demo.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I'll help you research the key benefits of YAML for configuration management.
 
@@ -291,7 +291,7 @@ EOF
 python content_pipeline.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 [Delegating to researcher subagent...]
 [Researching microservices architecture...]
@@ -387,7 +387,7 @@ EOF
 python content_pipeline.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 [Delegating to researcher subagent with Sonnet model...]
 [Conducting more detailed research...]
@@ -464,7 +464,7 @@ EOF
 python content_pipeline.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Microservices architecture allows you to build applications as independent services. Here's a practical example:
 
@@ -549,7 +549,7 @@ EOF
 python content_pipeline.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 [Delegating to reviewer with stricter standards...]
 
@@ -749,7 +749,7 @@ EOF
 python test_validation.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 ✗ Config validation failed:
   - ('researcher', 'description'): String should have at least 10 characters
@@ -784,7 +784,7 @@ EOF
 python test_validation2.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 ✓ Config is valid
   Loaded 3 subagents

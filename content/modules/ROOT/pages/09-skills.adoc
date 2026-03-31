@@ -133,7 +133,7 @@ EOF
 python test_skill_invocation.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 [Request 1 - Triggers code-review skill]
 Reading skills/code-review/SKILL.md...
@@ -189,7 +189,7 @@ EOF
 python test_subagent_skills.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Delegating to code-reviewer subagent...
 Reading skills/code-review/SKILL.md...
@@ -262,7 +262,7 @@ EOF
 python test_skill_layering.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Reading skills-override/code-review/SKILL.md...
 Reading authentication.py...
@@ -323,7 +323,7 @@ EOF
 python test_skill_delegation.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Reading skills/research-and-write/SKILL.md...
 Delegating to researcher subagent...

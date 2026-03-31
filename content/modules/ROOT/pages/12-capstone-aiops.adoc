@@ -772,7 +772,7 @@ cd aiops
 python agent.py
 ----
 +
-.Expected workflow
+.Sample output (your results may vary)
 ----
 The agent will coordinate a multi-step incident response:
 1. ops_manager receives alert and parses incident details

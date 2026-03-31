@@ -45,7 +45,7 @@ The Deep Agents CLI stores configuration and user-level customizations in `~/.de
 ls -la ~/.deepagents/ 2>/dev/null || echo "No config directory yet"
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 total 0
 drwxr-xr-x  4 user  staff  128 Mar 30 10:15 .
@@ -77,7 +77,7 @@ cp -r skills/code-review ~/.deepagents/agent/skills/
 deepagents skills list
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Available skills:
   - code-review (from ~/.deepagents/agent/skills/)
@@ -109,7 +109,7 @@ The CLI also supports a non-interactive headless mode, useful for scripting and 
 deepagents --headless "List all Python files in the current directory and count the total lines of code" 2>/dev/null
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Found 12 Python files in the current directory:
 - agent.py (245 lines)
@@ -149,7 +149,7 @@ cd deep-agents-workshop
 ls AGENTS.md skills/
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 AGENTS.md
 

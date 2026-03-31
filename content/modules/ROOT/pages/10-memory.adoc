@@ -81,7 +81,7 @@ EOF
 uv run python test_memory.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Based on the project's coding standards, you should follow these practices:
 
@@ -126,7 +126,7 @@ EOF
 uv run python update_memory.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I've updated the AGENTS.md file to include the Pydantic V2 coding standard. The change has been added to the Coding Standards section.
 ----
@@ -138,7 +138,7 @@ I've updated the AGENTS.md file to include the Pydantic V2 coding standard. The 
 cat AGENTS.md
 ----
 +
-.Expected output
+.Sample output (your results may vary)
 ----
 # Project Context
 
@@ -218,7 +218,7 @@ EOF
 uv run python layered_memory.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Use uv to install dependencies:
 
@@ -294,7 +294,7 @@ EOF
 uv run python full_stack.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I'll research FastAPI best practices and review authentication.py.
 
@@ -377,7 +377,7 @@ EOF
 uv run python multi_provider.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 [Delegating research to researcher subagent using GPT-4o...]
 Top 3 frameworks: FastAPI, Tornado, aiohttp
