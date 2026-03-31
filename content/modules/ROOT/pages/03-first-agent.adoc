@@ -160,9 +160,9 @@ MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 agent = create_deep_agent(model=MODEL)
 
 for event in agent.stream({"messages": [("user", "Write a haiku about Python programming")]}):
-    for key, value in event.items():
-        if key == "messages":
-            for msg in value:
+    for value in event.values():
+        if isinstance(value, dict) and "messages" in value:
+            for msg in value["messages"]:
                 if hasattr(msg, 'content') and msg.content:
                     print(msg.content, end="", flush=True)
 print()
@@ -184,11 +184,9 @@ Pythonic and clear.
 ----
 +
 Instead of `invoke()`, you used `stream()`.
-This returns an event stream in LangGraph's event format — a series of dictionaries representing state updates as the agent executes.
-Each event can contain different keys (`messages`, `task_updates`, `tool_calls`, etc.), and you filter for the ones you care about.
+This returns an event stream in LangGraph's format — each event is a dictionary keyed by the **node name** that produced it (e.g., `"model"`, `"PatchToolCallsMiddleware.before_agent"`). The node's output is itself a dict that may contain a `"messages"` key with the actual content.
 +
-In this case, you're watching for `messages` events and printing content as it arrives.
-You'll see the haiku appear token by token, just like in a chat interface.
+The code iterates through each event's values, checks for a `"messages"` key inside, and prints any content it finds. You'll see the haiku appear as the agent generates it.
 
 == Exercise 3: Exploring Defaults
 
