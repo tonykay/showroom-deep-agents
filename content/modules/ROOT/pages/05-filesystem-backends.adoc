@@ -5,17 +5,17 @@ The agent's ability to read, write, and navigate files is what makes it useful f
 
 == Exercise 1: Built-in File Tools
 
-Let's exercise the full range of file tools by having the agent create a small project structure:
+Let's exercise the full range of file tools by having the agent create a small project structure.
 
-First, create a workspace directory:
-
+. Create a workspace directory:
++
 [source,role="execute"]
 ----
 mkdir -p workspace
 ----
 
-Now create an agent that uses the filesystem backend:
-
+. Create an agent that uses the filesystem backend:
++
 [source,role="execute"]
 ----
 cat > file_tools.py << 'EOF'
@@ -37,9 +37,32 @@ print(result["messages"][-1].content)
 EOF
 ----
 
+. Run the agent script:
++
 [source,role="execute"]
 ----
 uv run python file_tools.py
+----
++
+.Sample output
+----
+I've successfully created the project structure. Here's what I did:
+
+1. Created a directory called 'myproject'
+2. Created README.md with a project description
+3. Created main.py with a hello world function
+4. Listed the files to verify creation
+5. Read back the README content
+
+The directory contains:
+- README.md
+- main.py
+
+The README.md file contains:
+# MyProject
+
+This is a simple Python project demonstrating basic project structure.
+It includes a main.py file with a hello world function.
 ----
 
 Look at the agent's response. You'll see it used multiple tools in sequence:
@@ -52,8 +75,10 @@ This is the filesystem pillar in action. The agent understands how to combine th
 
 == Exercise 2: The Execute Tool
 
-The `execute` tool lets the agent run shell commands. This is powerful but requires care — let's explore it:
+The `execute` tool lets the agent run shell commands. This is powerful but requires care — let's explore it.
 
+. Create a script to test the execute tool:
++
 [source,role="execute"]
 ----
 cat > execute_tool.py << 'EOF'
@@ -74,9 +99,26 @@ print(result["messages"][-1].content)
 EOF
 ----
 
+. Run the script:
++
 [source,role="execute"]
 ----
 uv run python execute_tool.py
+----
++
+.Sample output
+----
+I've checked the installed versions and listed the current directory:
+
+Python version: Python 3.12.2
+uv version: uv 0.1.24
+
+Current directory contents:
+total 16
+drwxr-xr-x  4 user  staff  128 Mar 30 10:15 .
+drwxr-xr-x  8 user  staff  256 Mar 30 10:10 ..
+drwxr-xr-x  4 user  staff  128 Mar 30 10:12 myproject
+-rw-r--r--  1 user  staff  512 Mar 30 10:15 README.md
 ----
 
 The agent ran real shell commands and captured their output. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
@@ -88,8 +130,10 @@ The agent ran real shell commands and captured their output. This enables workfl
 
 == Exercise 3: FilesystemBackend Root Scoping
 
-Let's explore how `FilesystemBackend` constrains file operations:
+Let's explore how `FilesystemBackend` constrains file operations.
 
+. Create a script to test backend scoping:
++
 [source,role="execute"]
 ----
 cat > scoped_backend.py << 'EOF'
@@ -112,9 +156,22 @@ print(result["messages"][-1].content)
 EOF
 ----
 
+. Run the scoped backend test:
++
 [source,role="execute"]
 ----
 uv run python scoped_backend.py
+----
++
+.Sample output
+----
+I successfully listed the files in the current directory:
+- README.md
+- main.py
+
+However, I was unable to read /etc/passwd because the path is outside
+the allowed root directory. The FilesystemBackend enforces path
+boundaries and restricts access to files outside ./workspace/myproject.
 ----
 
 The agent can list files within the scoped directory, but attempting to read `/etc/passwd` will fail. The backend enforces path boundaries, preventing the agent from accessing files outside `root_dir`.
@@ -127,8 +184,10 @@ This scoping is critical for:
 
 == Exercise 4: StateBackend (Ephemeral In-Memory)
 
-Sometimes you want the agent to work with files without touching the real filesystem. `StateBackend` stores everything in memory:
+Sometimes you want the agent to work with files without touching the real filesystem. `StateBackend` stores everything in memory.
 
+. Create a script to test the StateBackend:
++
 [source,role="execute"]
 ----
 cat > state_backend.py << 'EOF'
@@ -149,9 +208,24 @@ print(result["messages"][-1].content)
 EOF
 ----
 
+. Run the StateBackend test:
++
 [source,role="execute"]
 ----
 uv run python state_backend.py
+----
++
+.Sample output
+----
+I've successfully created and verified the file:
+
+1. Created 'notes.txt' with the following content:
+   "These are my notes for the deep agents workshop.
+   The StateBackend stores files in memory only."
+
+2. Read back the file to verify - the content matches what was written.
+
+The file was successfully created and read, though it only exists in memory.
 ----
 
 The agent successfully created and read the file, but it only exists in the LangGraph state — check your filesystem and you won't find `notes.txt` anywhere.
