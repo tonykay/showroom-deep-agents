@@ -1,6 +1,6 @@
 ---
 site:
-  title: Showroom Template Demo
+  title: "Deep Agents: From First Agent to Production Multi-Agent Systems"
   url: https://github.com/rhpds/showroom_template_nookbag
   start_page: modules::index.adoc
 

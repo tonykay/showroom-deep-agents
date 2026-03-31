@@ -1,0 +1,265 @@
+= Custom Tools
+:source-highlighter: rouge
+
+The built-in tools cover filesystem operations, but real agents need domain-specific capabilities. In this module, you'll learn how to create custom tools that extend your agent's abilities with specialized functions tailored to your application's needs.
+
+== Exercise 1: Simple Tool
+
+The `@tool` decorator from `langchain_core` makes it easy to turn any Python function into a tool the agent can use. Let's start with a basic example.
+
+Create a simple word-counting tool:
+
+[source,role="execute"]
+----
+cat > simple_tool.py << 'EOF'
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[word_count],
+)
+
+result = agent.invoke({"messages": [("user",
+    "How many words are in this sentence: "
+    "'The quick brown fox jumps over the lazy dog'"
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+Run it to see the agent use your custom tool:
+
+[source,role="execute"]
+----
+python simple_tool.py
+----
+
+Notice how custom tools are passed via the `tools=[...]` parameter and are added alongside (not replacing) the built-in tools. The `@tool` decorator automatically creates a tool schema from your function's signature and docstring.
+
+== Exercise 2: Tool with Structured Input
+
+For more complex tools, you can use Pydantic V2 models to define structured input schemas with rich field descriptions.
+
+Create a code analysis tool with multiple parameters:
+
+[source,role="execute"]
+----
+cat > structured_tool.py << 'EOF'
+from pydantic import BaseModel, Field
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+
+class CodeAnalysisInput(BaseModel):
+    code: str = Field(description="The Python code to analyze")
+    check_types: bool = Field(default=True, description="Whether to check for type hints")
+    check_docstrings: bool = Field(default=True, description="Whether to check for docstrings")
+
+@tool(args_schema=CodeAnalysisInput)
+def analyze_code(code: str, check_types: bool = True, check_docstrings: bool = True) -> str:
+    """Analyze Python code for quality issues like missing type hints and docstrings."""
+    issues = []
+    if check_types and "->" not in code and ":" not in code:
+        issues.append("No type hints found")
+    if check_docstrings and '"""' not in code and "'''" not in code:
+        issues.append("No docstrings found")
+    if not issues:
+        return "Code looks good!"
+    return "Issues found: " + ", ".join(issues)
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[analyze_code],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Analyze this code: def add(a, b): return a + b"
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+Run it to see structured input in action:
+
+[source,role="execute"]
+----
+python structured_tool.py
+----
+
+Pydantic V2 models give the LLM a rich schema with field descriptions, making it easier for the model to understand how to call your tool correctly with all the right parameters.
+
+== Exercise 3: Tool Design Patterns
+
+Before writing more tools, consider these design patterns that make tools more effective:
+
+**Tool descriptions are the primary routing signal**
+
+The LLM decides which tool to use based primarily on the description in your docstring. Make it count.
+
+**Keep descriptions specific and action-oriented**
+
+Good: "Calculate the sum of two numbers and return the result"
+
+Bad: "A tool for math"
+
+**When to use a tool vs. system prompt instruction**
+
+Use tools for:
+
+- Actions with side effects (API calls, file writes)
+- Deterministic computations
+- External data access
+
+Use system prompts for:
+
+- Formatting preferences
+- Tone and style
+- General behavioral guidelines
+
+**One tool per concern**
+
+Don't create a single "do_everything" tool. Instead, create focused tools that each do one thing well. This makes it easier for the LLM to choose the right tool and for you to maintain the code.
+
+== Exercise 4: Multiple Tools
+
+Let's add several tools and observe how the agent routes between them based on user questions.
+
+Create an agent with multiple specialized tools:
+
+[source,role="execute"]
+----
+cat > multiple_tools.py << 'EOF'
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+@tool
+def get_timestamp() -> str:
+    """Get the current date and time in ISO format."""
+    from datetime import datetime
+    return datetime.now().isoformat()
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression safely. Only supports basic arithmetic."""
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expression):
+        return "Error: only basic arithmetic is supported"
+    return str(eval(expression))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[word_count, get_timestamp, calculate],
+)
+
+# Try questions that route to different tools
+questions = [
+    "What time is it?",
+    "How many words: 'Hello world from Python'",
+    "What is 15 * 23 + 7?",
+]
+
+for question in questions:
+    print(f"\nQuestion: {question}")
+    result = agent.invoke({"messages": [("user", question)]})
+    print(f"Answer: {result['messages'][-1].content}")
+EOF
+----
+
+Run it and watch the agent select the appropriate tool for each question:
+
+[source,role="execute"]
+----
+python multiple_tools.py
+----
+
+The agent automatically chooses the right tool based on the question and the tool descriptions you provided.
+
+== Exercise 5: Interrupt on Tool Call
+
+For tools with side effects or high costs, you can add human-in-the-loop approval using interrupts.
+
+Create an agent that pauses before executing certain tools:
+
+[source,role="execute"]
+----
+cat > interrupt_tool.py << 'EOF'
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression safely. Only supports basic arithmetic."""
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expression):
+        return "Error: only basic arithmetic is supported"
+    return str(eval(expression))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[word_count, calculate],
+    interrupt_on={"calculate": True},
+)
+
+# The agent will pause before executing the calculate tool
+config = {"configurable": {"thread_id": "interrupt-demo"}}
+result = agent.invoke(
+    {"messages": [("user", "What is 100 * 50?")]},
+    config=config
+)
+
+# Check if we hit an interrupt
+state = agent.get_state(config)
+if state.next:
+    print(f"Agent paused before calling: {state.next}")
+    print("Approve execution? (y/n)")
+    # In a real app, you'd wait for user input
+    # For demo purposes, we'll auto-approve
+    approval = "y"
+    if approval.lower() == "y":
+        # Continue execution
+        result = agent.invoke(None, config=config)
+        print(f"Result: {result['messages'][-1].content}")
+    else:
+        print("Execution cancelled")
+else:
+    print(f"Result: {result['messages'][-1].content}")
+EOF
+----
+
+Run it to see the interrupt mechanism:
+
+[source,role="execute"]
+----
+python interrupt_tool.py
+----
+
+The agent pauses before executing the specified tool and waits for approval. This is critical for tools with side effects like sending emails, making purchases, or deleting files.
+
+== Module Summary
+
+You've learned how to extend agents with custom tools:
+
+- Basic tools using the `@tool` decorator
+- Structured input schemas with Pydantic V2
+- Tool design patterns for effective routing
+- Managing multiple specialized tools
+- Human-in-the-loop approval with interrupts
+
+Custom tools are where agents become truly useful in real applications. By creating domain-specific tools, you can build agents that integrate with your systems, APIs, and business logic while maintaining control over critical operations through interrupts.

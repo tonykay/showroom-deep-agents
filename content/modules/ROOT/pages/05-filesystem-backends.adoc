@@ -1,0 +1,214 @@
+= Filesystem Tools & Backends
+:source-highlighter: rouge
+
+The agent's ability to read, write, and navigate files is what makes it useful for real development tasks. In this module, you'll explore the built-in file tools and learn how backends control where and how file operations happen.
+
+== Exercise 1: Built-in File Tools
+
+Let's exercise the full range of file tools by having the agent create a small project structure:
+
+First, create a workspace directory:
+
+[source,role="execute"]
+----
+mkdir -p workspace
+----
+
+Now create an agent that uses the filesystem backend:
+
+[source,role="execute"]
+----
+cat > file_tools.py << 'EOF'
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    backend=FilesystemBackend(root_dir="./workspace"),
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a directory called 'myproject' with a README.md and a main.py file. "
+    "The README should describe the project. The main.py should have a hello world function. "
+    "Then list the files you created and read back the README to verify it."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+[source,role="execute"]
+----
+uv run python file_tools.py
+----
+
+Look at the agent's response. You'll see it used multiple tools in sequence:
+
+* **write_file** — created both README.md and main.py
+* **ls** — listed the directory contents to verify
+* **read_file** — read back the README to confirm the content
+
+This is the filesystem pillar in action. The agent understands how to combine these primitives to accomplish complex file manipulation tasks.
+
+== Exercise 2: The Execute Tool
+
+The `execute` tool lets the agent run shell commands. This is powerful but requires care — let's explore it:
+
+[source,role="execute"]
+----
+cat > execute_tool.py << 'EOF'
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    backend=FilesystemBackend(root_dir="./workspace"),
+)
+
+result = agent.invoke({"messages": [("user",
+    "Run 'python --version' and 'uv --version' to check what's installed, "
+    "then run 'ls -la' to show the current directory."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+[source,role="execute"]
+----
+uv run python execute_tool.py
+----
+
+The agent ran real shell commands and captured their output. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
+
+[WARNING]
+====
+**Sandboxing considerations**: The `execute` tool runs real commands with real side effects. While `FilesystemBackend` scopes file operations to `root_dir`, execute commands can access the broader system. Use caution when giving agents shell access, especially with untrusted prompts.
+====
+
+== Exercise 3: FilesystemBackend Root Scoping
+
+Let's explore how `FilesystemBackend` constrains file operations:
+
+[source,role="execute"]
+----
+cat > scoped_backend.py << 'EOF'
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+
+backend = FilesystemBackend(root_dir="./workspace/myproject")
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    backend=backend,
+)
+
+result = agent.invoke({"messages": [("user",
+    "List all files in the current directory. "
+    "Then try to read /etc/passwd."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+[source,role="execute"]
+----
+uv run python scoped_backend.py
+----
+
+The agent can list files within the scoped directory, but attempting to read `/etc/passwd` will fail. The backend enforces path boundaries, preventing the agent from accessing files outside `root_dir`.
+
+This scoping is critical for:
+
+* **Testing** — contain agent file operations to a test workspace
+* **Security** — prevent accidental or malicious access to sensitive files
+* **Isolation** — keep agent work separate from your real project files
+
+== Exercise 4: StateBackend (Ephemeral In-Memory)
+
+Sometimes you want the agent to work with files without touching the real filesystem. `StateBackend` stores everything in memory:
+
+[source,role="execute"]
+----
+cat > state_backend.py << 'EOF'
+from deepagents import create_deep_agent
+from deepagents.backends import StateBackend
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    backend=StateBackend(),
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a file called 'notes.txt' with some content. "
+    "Then read it back to verify."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+[source,role="execute"]
+----
+uv run python state_backend.py
+----
+
+The agent successfully created and read the file, but it only exists in the LangGraph state — check your filesystem and you won't find `notes.txt` anywhere.
+
+`StateBackend` is ideal for:
+
+* **Testing** — verify agent behavior without filesystem side effects
+* **Sandboxing** — let the agent manipulate "files" safely
+* **Temporary workspaces** — files only live for the duration of the conversation
+
+When the agent run completes, the in-memory filesystem disappears.
+
+== Exercise 5: CompositeBackend Preview
+
+For advanced use cases, you can layer multiple backends using `CompositeBackend`:
+
+[source,python]
+----
+from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
+
+backend = CompositeBackend(
+    mounts={
+        "/workspace": FilesystemBackend(root_dir="./workspace"),
+        "/scratch": StateBackend(),
+    }
+)
+----
+
+This setup routes different paths to different storage:
+
+* Files under `/workspace` go to the real filesystem
+* Files under `/scratch` stay in memory
+
+You could combine FilesystemBackend for persistent project files with StateBackend for temporary scratch work, or mix in custom backends for database access, S3 storage, or anything else.
+
+We'll explore `CompositeBackend` in depth during the capstone project. For now, just know it's available when you need sophisticated storage routing.
+
+[NOTE]
+====
+**CLI Default**: The CLI uses `FilesystemBackend` rooted at the current working directory by default. When you run `deepagents`, file operations happen in the directory where you launched the command.
+====
+
+== Module Summary
+
+In this module, you accomplished:
+
+* Exercised the full suite of file tools — write, read, ls, grep, execute
+* Explored FilesystemBackend's root_dir scoping for safety and isolation
+* Used StateBackend for ephemeral in-memory file operations
+* Previewed CompositeBackend for advanced storage routing
+
+Key takeaways:
+
+* File tools are the foundation of real-world agent tasks
+* Backends control where file operations happen and enforce boundaries
+* FilesystemBackend scopes to a root directory; StateBackend keeps everything in memory
+* The execute tool is powerful but requires careful sandboxing
+* Backends are pluggable — you can route different paths to different storage systems
+
+Next up: you'll learn how to create custom tools, extending your agent's capabilities beyond the built-in defaults.

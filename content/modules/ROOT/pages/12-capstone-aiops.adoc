@@ -1,0 +1,919 @@
+= Capstone: AIOps Team
+:source-highlighter: rouge
+
+This is where everything comes together. You've learned system prompts, backends, tools, subagents, skills, memory, and configuration-driven design. Now you'll synthesize all of it into a production-style multi-agent system: an AIOps incident response team.
+
+You'll build an ops_manager orchestrator that coordinates three specialized SRE subagents: sre_log_analyst for log parsing, sre_diagnostician for root cause analysis, and sre_remediator for fixes with human approval gates. This isn't a toy example—it's a realistic architecture for automated incident response.
+
+== Architecture Overview
+
+The AIOps team follows a structured incident response workflow:
+
+[mermaid]
+....
+graph TD
+    I[Incident Alert] --> OM[ops_manager<br/>Orchestrator]
+    OM -->|task| LA[sre_log_analyst<br/>Log Parsing & Patterns]
+    OM -->|task| DG[sre_diagnostician<br/>Root Cause Analysis]
+    OM -->|task| RM[sre_remediator<br/>Fixes & Rollbacks]
+    LA -->|findings| OM
+    DG -->|diagnosis| OM
+    RM -->|remediation plan| OM
+    OM --> R[Incident Report]
+    LA -.->|skill| S1[log-analysis]
+    DG -.->|skill| S2[diagnostics]
+    RM -.->|skill| S3[remediation]
+....
+
+The ops_manager receives an incident alert and orchestrates the response. It delegates to specialized subagents, each with their own skills and tools. The subagents return findings to the orchestrator, which compiles a final incident report.
+
+This architecture demonstrates:
+- Hierarchical delegation (orchestrator + specialists)
+- Progressive disclosure (skills loaded on demand)
+- Human-in-the-loop controls (interrupt gates)
+- Configuration-driven design (YAML subagents)
+- Persistent memory (operational context)
+
+== Exercise 1: Design the Team
+
+Start by creating the directory structure and defining the three specialized subagents in YAML:
+
+[source,role="execute"]
+----
+mkdir -p aiops/skills/{log-analysis,diagnostics,remediation}
+----
+
+Now define the subagent team:
+
+[source,role="execute"]
+----
+cat > aiops/subagents.yaml << 'EOF'
+sre_log_analyst:
+  description: >
+    ALWAYS use this first to analyze logs when investigating incidents.
+    Expert at log parsing, pattern detection, and identifying error sequences.
+    Use when you need to understand what happened from log data.
+  model: anthropic:claude-haiku-4-5-20251001
+  system_prompt: |
+    You are an SRE log analysis specialist. Your job is to examine
+    logs and extract meaningful patterns, error sequences, and anomalies.
+
+    ## Your Tools
+    - fetch_logs(service, minutes=30) - Retrieve recent logs from a service
+    - query_metrics(service, metric) - Query monitoring metrics
+
+    ## Your Process
+    1. Fetch logs for the affected service
+    2. Identify error patterns and sequences
+    3. Note timestamps and correlations
+    4. Look for anomalies (OOM kills, connection pool exhaustion, etc.)
+    5. Summarize findings clearly for the diagnostician
+
+    ## Output
+    Write a structured summary with:
+    - Timeline of events
+    - Key error patterns
+    - Suspicious metrics or anomalies
+    - Recommendations for further investigation
+  tools:
+    - fetch_logs
+    - query_metrics
+  skills:
+    - ./aiops/skills/log-analysis/
+
+sre_diagnostician:
+  description: >
+    Use this to perform root cause analysis after log analysis is complete.
+    Expert at connecting symptoms to underlying causes using diagnostic
+    procedures and failure mode knowledge. Use when you have findings
+    and need to determine the root cause.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are an SRE diagnostician. You analyze findings from log analysis
+    and apply diagnostic procedures to determine root causes.
+
+    ## Your Tools
+    - query_metrics(service, metric) - Query monitoring metrics for validation
+
+    ## Your Process
+    1. Review findings from the log analyst
+    2. Apply diagnostic decision trees from your skill
+    3. Query metrics to validate hypotheses
+    4. Identify the most likely root cause
+    5. Assess confidence level and recommend remediation approach
+
+    ## Output
+    Write a diagnostic report with:
+    - Root cause analysis (what failed and why)
+    - Supporting evidence from logs and metrics
+    - Confidence level (high/medium/low)
+    - Recommended remediation action
+  tools:
+    - query_metrics
+  skills:
+    - ./aiops/skills/diagnostics/
+
+sre_remediator:
+  description: >
+    Use this to execute remediation after root cause is identified.
+    Expert at applying fixes, rollbacks, and scaling actions with
+    appropriate risk controls. ALWAYS requires human approval for
+    execution via the interrupt mechanism.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are an SRE remediation specialist. You apply fixes based on
+    diagnostic findings, following runbooks and risk procedures.
+
+    ## Your Tools
+    - execute_remediation(action, target) - Execute a remediation action
+      (REQUIRES HUMAN APPROVAL via interrupt)
+
+    ## Your Process
+    1. Review the root cause diagnosis
+    2. Consult runbooks from your skill for the specific failure mode
+    3. Propose a remediation plan with risk assessment
+    4. Execute using execute_remediation (will pause for approval)
+    5. Report results and recommend follow-up actions
+
+    ## Risk Levels
+    - Low: service restart, scale up resources
+    - Medium: rollback deployment, connection pool reset
+    - High: database failover, emergency maintenance
+
+    ## Output
+    Write a remediation report with:
+    - Proposed action and risk level
+    - Expected impact and recovery time
+    - Execution results
+    - Follow-up recommendations
+  tools:
+    - execute_remediation
+  skills:
+    - ./aiops/skills/remediation/
+EOF
+----
+
+This YAML defines a three-tier specialist team:
+
+- **sre_log_analyst**: Uses Haiku for fast log parsing, has access to log and metric queries
+- **sre_diagnostician**: Uses Sonnet for complex reasoning, applies diagnostic procedures
+- **sre_remediator**: Uses Sonnet for careful remediation planning, has human approval gates
+
+Notice the progressive model selection: Haiku for data extraction, Sonnet for reasoning and execution. Also notice how the descriptions guide routing: "ALWAYS use this first", "Use this after log analysis", "Use this to execute".
+
+== Exercise 2: Build the Skills
+
+Skills provide each subagent with specialized knowledge. Create three SKILL.md files—one for each specialist.
+
+First, the log analysis skill:
+
+[source,role="execute"]
+----
+cat > aiops/skills/log-analysis/SKILL.md << 'EOF'
+---
+name: log-analysis
+description: Expert procedures for analyzing application and infrastructure logs to identify error patterns, anomalies, and failure sequences.
+---
+
+# Log Analysis Skill
+
+## Error Pattern Detection
+
+When analyzing logs, look for these common patterns:
+
+### Connection Pool Exhaustion
+- `Connection pool exhausted`
+- `max connections reached`
+- `Timeout waiting for connection`
+- Often followed by cascading failures
+
+### Out of Memory (OOM)
+- `OOM Kill`
+- `container memory limit exceeded`
+- `java.lang.OutOfMemoryError`
+- `GC overhead limit exceeded`
+- Usually preceded by gradual memory growth
+
+### Database Issues
+- `deadlock detected`
+- `too many connections`
+- `connection refused`
+- `query timeout`
+- Check for long-running queries
+
+### Network Problems
+- `connection reset by peer`
+- `connection timed out`
+- `no route to host`
+- `DNS resolution failed`
+
+## Anomaly Detection
+
+Watch for deviations from normal patterns:
+
+1. **Frequency anomalies**: Error rates spiking from <1% to >5%
+2. **Timing anomalies**: Response times jumping 10x or more
+3. **Volume anomalies**: Traffic patterns changing dramatically
+4. **Sequence anomalies**: Errors in unexpected order
+
+## Correlation Analysis
+
+Look for correlations between events:
+
+- Error spikes correlated with deployments
+- Resource exhaustion preceding service failures
+- Cascading failures (A fails, then B, then C)
+- Time-based patterns (daily cycles, weekly patterns)
+
+## Output Format
+
+Structure your findings:
+1. **Timeline**: Chronological sequence of key events
+2. **Patterns**: Identified error patterns with examples
+3. **Anomalies**: Deviations from baseline behavior
+4. **Metrics**: Supporting data (error rates, response times, resource usage)
+5. **Hypothesis**: Initial theory about what went wrong
+EOF
+----
+
+Next, the diagnostics skill:
+
+[source,role="execute"]
+----
+cat > aiops/skills/diagnostics/SKILL.md << 'EOF'
+---
+name: diagnostics
+description: Diagnostic decision trees and failure mode knowledge for determining root causes of service incidents.
+---
+
+# Diagnostic Skill
+
+## Common Failure Modes
+
+### Out of Memory (OOM)
+**Symptoms**:
+- OOM kill messages in logs
+- Container restarts
+- Memory metrics at/near limit
+
+**Diagnostic Steps**:
+1. Check memory trend before failure (gradual vs sudden)
+2. Review application memory profile
+3. Check for memory leaks (heap dumps if available)
+4. Verify memory limits are appropriate
+
+**Common Causes**:
+- Memory leak in application code
+- Undersized container limits
+- Traffic spike exceeding capacity
+- Memory-intensive operations (large queries, caching)
+
+### Connection Pool Exhaustion
+**Symptoms**:
+- "Connection pool exhausted" errors
+- Timeouts waiting for connections
+- Service degradation under load
+
+**Diagnostic Steps**:
+1. Check current vs max connection settings
+2. Review connection lifecycle (are connections released?)
+3. Check for long-running queries holding connections
+4. Verify downstream service health
+
+**Common Causes**:
+- Connection leaks (not closing properly)
+- Pool sized too small for load
+- Downstream service slowness
+- Database performance issues
+
+### Disk Space Exhaustion
+**Symptoms**:
+- "No space left on device"
+- Write failures
+- Application crashes
+
+**Diagnostic Steps**:
+1. Check disk usage metrics
+2. Identify largest files/directories
+3. Review log rotation policies
+4. Check for unexpected data growth
+
+**Common Causes**:
+- Log rotation not configured
+- Temporary file buildup
+- Database/cache growth
+- Failed cleanup jobs
+
+### DNS/Network Issues
+**Symptoms**:
+- "Name resolution failed"
+- "Connection timed out"
+- Intermittent connectivity
+
+**Diagnostic Steps**:
+1. Check DNS resolution for affected services
+2. Verify network connectivity paths
+3. Review firewall/security group rules
+4. Check for network congestion
+
+**Common Causes**:
+- DNS server issues
+- Network partition
+- Firewall rule changes
+- Service mesh configuration
+
+### Certificate Expiry
+**Symptoms**:
+- "Certificate has expired"
+- TLS handshake failures
+- Sudden service unavailability
+
+**Diagnostic Steps**:
+1. Check certificate expiration dates
+2. Verify certificate chain validity
+3. Review renewal automation
+4. Check for certificate mismatch
+
+**Common Causes**:
+- Expired certificates
+- Failed auto-renewal
+- Certificate configuration errors
+
+## Diagnostic Decision Tree
+
+```
+START: Service degradation or failure
+  ↓
+[Check recent changes]
+  → Recent deployment? → Likely: Code regression or config change
+  → Infrastructure change? → Likely: Resource/network issue
+  → No changes? → Continue to symptoms
+  ↓
+[Examine error patterns]
+  → OOM/memory errors? → Run OOM diagnostics
+  → Connection errors? → Run connection pool diagnostics
+  → Disk errors? → Run disk space diagnostics
+  → Network/timeout? → Run network diagnostics
+  → Certificate errors? → Run certificate diagnostics
+  ↓
+[Validate hypothesis]
+  → Query metrics to confirm
+  → Check correlating events
+  → Assess confidence (high/medium/low)
+  ↓
+[Recommend remediation]
+```
+
+## Confidence Assessment
+
+Rate your diagnostic confidence:
+
+- **High**: Clear evidence, well-known failure mode, metrics confirm
+- **Medium**: Evidence present but some ambiguity, metrics partially confirm
+- **Low**: Multiple possible causes, limited evidence, recommend deeper investigation
+EOF
+----
+
+Finally, the remediation skill:
+
+[source,role="execute"]
+----
+cat > aiops/skills/remediation/SKILL.md << 'EOF'
+---
+name: remediation
+description: Runbooks and procedures for safely remediating common service failures with appropriate risk controls.
+---
+
+# Remediation Skill
+
+## Risk Classification
+
+All remediation actions are classified by risk:
+
+- **Low**: Minimal impact, fast rollback, safe to automate
+- **Medium**: Some impact, requires approval, rollback available
+- **High**: Significant impact, requires senior approval, complex rollback
+
+## Runbooks
+
+### Service Restart (Low Risk)
+**When to use**: Process crashes, hung services, minor memory leaks
+
+**Procedure**:
+1. Execute: `execute_remediation("restart", "service-name")`
+2. Monitor: Service comes back healthy within 30s
+3. Verify: Health checks passing, traffic resuming
+
+**Expected downtime**: 10-30 seconds
+
+**Rollback**: N/A (restart is the rollback)
+
+### Scale Up Resources (Low Risk)
+**When to use**: Resource exhaustion (CPU, memory, connections)
+
+**Procedure**:
+1. Execute: `execute_remediation("scale_up", "service-name")`
+2. Monitor: New instances starting, load distributing
+3. Verify: Metrics returning to normal
+
+**Expected impact**: None (adds capacity)
+
+**Rollback**: Scale down after incident resolved
+
+### Rollback Deployment (Medium Risk)
+**When to use**: Recent deployment causing errors, regression detected
+
+**Procedure**:
+1. Identify previous stable version
+2. Execute: `execute_remediation("rollback_deployment", "service-name")`
+3. Monitor: Rollback progress, service health
+4. Verify: Error rate dropping, functionality restored
+
+**Expected downtime**: 30-90 seconds during rollback
+
+**Rollback**: Re-deploy if rollback causes issues (rare)
+
+### Connection Pool Reset (Medium Risk)
+**When to use**: Connection pool exhaustion, leaked connections
+
+**Procedure**:
+1. Execute: `execute_remediation("reset_connection_pool", "service-name")`
+2. Monitor: Pool draining and re-initializing
+3. Verify: Connections available, errors cleared
+
+**Expected impact**: Brief connection errors during reset
+
+**Rollback**: Service restart if reset fails
+
+### Increase Connection Pool Size (Low Risk)
+**When to use**: Pool legitimately too small for load
+
+**Procedure**:
+1. Execute: `execute_remediation("increase_pool_size", "service-name")`
+2. Monitor: Configuration update, pool expansion
+3. Verify: Connections available, no exhaustion
+
+**Expected impact**: None (increases capacity)
+
+**Rollback**: Revert configuration change
+
+### Clear Disk Space (Medium Risk)
+**When to use**: Disk space exhaustion
+
+**Procedure**:
+1. Identify safe-to-delete files (old logs, temp files)
+2. Execute: `execute_remediation("clear_disk_space", "service-name")`
+3. Monitor: Disk usage decreasing
+4. Verify: Service writing successfully
+
+**Expected impact**: Minimal, may lose old logs
+
+**Rollback**: N/A (files deleted)
+
+## Remediation Plan Template
+
+When proposing remediation, structure it:
+
+1. **Root Cause**: Brief summary from diagnostics
+2. **Proposed Action**: Specific remediation from runbook
+3. **Risk Level**: Low/Medium/High
+4. **Expected Impact**: Downtime, data loss, user impact
+5. **Recovery Time**: How long until service restored
+6. **Rollback Plan**: How to undo if it doesn't work
+7. **Approval Required**: Yes (always for production)
+
+## Follow-up Actions
+
+After remediation, always recommend:
+
+1. **Monitoring**: What to watch for recurrence
+2. **Post-mortem**: Schedule incident review
+3. **Prevention**: Long-term fixes (increase limits, fix leaks, etc.)
+4. **Documentation**: Update runbooks with learnings
+EOF
+----
+
+These skills provide each subagent with deep domain knowledge without bloating the system prompt. The log analyst knows how to find patterns, the diagnostician has decision trees for failure modes, and the remediator has risk-aware runbooks.
+
+== Exercise 3: Write the Loader
+
+Now create the custom tools and the loader function that wires everything together:
+
+[source,role="execute"]
+----
+cat > aiops/tools.py << 'EOF'
+from langchain_core.tools import tool
+
+@tool
+def execute_remediation(action: str, target: str) -> str:
+    """Execute a remediation action on a target system.
+
+    REQUIRES HUMAN APPROVAL via interrupt mechanism.
+
+    Args:
+        action: The remediation action (e.g., 'restart', 'rollback_deployment')
+        target: The target service or component
+    """
+    return f"[SIMULATED] Executed '{action}' on '{target}' — success"
+
+@tool
+def fetch_logs(service: str, minutes: int = 30) -> str:
+    """Fetch recent logs from a service.
+
+    Args:
+        service: The service name
+        minutes: How many minutes of logs to retrieve
+    """
+    return f"""[{service}] 2026-03-30T14:22:01Z ERROR Connection pool exhausted - max connections (100) reached
+[{service}] 2026-03-30T14:22:03Z WARN Request queued - no available connections
+[{service}] 2026-03-30T14:22:05Z ERROR Timeout waiting for database connection (30s)
+[{service}] 2026-03-30T14:22:08Z ERROR 503 Service Unavailable returned to client
+[{service}] 2026-03-30T14:22:10Z WARN Connection pool health check failed
+[{service}] 2026-03-30T14:22:15Z ERROR OOM Kill: container memory limit (512Mi) exceeded
+[{service}] 2026-03-30T14:22:18Z INFO Service restarted by orchestrator
+[{service}] 2026-03-30T14:22:20Z WARN Connection pool re-initializing (0/100 connections)
+[{service}] 2026-03-30T14:22:25Z ERROR Connection pool exhausted again after restart"""
+
+@tool
+def query_metrics(service: str, metric: str) -> str:
+    """Query monitoring metrics for a service.
+
+    Args:
+        service: The service name
+        metric: The metric to query (cpu, memory, connections, error_rate)
+    """
+    metrics = {
+        "cpu": f"{service} CPU: 45% (normal: 20-30%)",
+        "memory": f"{service} Memory: 498Mi / 512Mi (97% - CRITICAL)",
+        "connections": f"{service} DB Connections: 100/100 (EXHAUSTED)",
+        "error_rate": f"{service} Error Rate: 23% (normal: <1%)",
+    }
+    return metrics.get(metric, f"Unknown metric: {metric}")
+EOF
+----
+
+Now create the loader that handles both tools and skills:
+
+[source,role="execute"]
+----
+cat > aiops/loader.py << 'EOF'
+import yaml
+from pathlib import Path
+from tools import execute_remediation, fetch_logs, query_metrics
+
+def load_subagents(config_path: Path) -> list:
+    """Load subagent definitions from a YAML file.
+
+    Maps tool name strings to actual tool objects and resolves
+    skill paths. This is a custom utility for config-driven design.
+    """
+    # Registry of available tools
+    available_tools = {
+        "execute_remediation": execute_remediation,
+        "fetch_logs": fetch_logs,
+        "query_metrics": query_metrics,
+    }
+
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    subagents = []
+    for name, spec in config.items():
+        subagent = {
+            "name": name,
+            "description": spec["description"],
+            "model": spec["model"],
+            "system_prompt": spec["system_prompt"],
+        }
+
+        # Map tool names to tool objects
+        if "tools" in spec:
+            subagent["tools"] = [
+                available_tools[tool_name]
+                for tool_name in spec["tools"]
+            ]
+
+        # Pass through skill paths
+        if "skills" in spec:
+            subagent["skills"] = spec["skills"]
+
+        subagents.append(subagent)
+
+    return subagents
+EOF
+----
+
+This loader extends the pattern from Module 6 to handle skills. When it encounters a `skills` key in the YAML, it passes the paths through to the subagent definition. The deepagents framework will discover and load the SKILL.md files from those directories.
+
+== Exercise 4: Wire Up Memory
+
+Create an AGENTS.md file with operational context that all agents can reference:
+
+[source,role="execute"]
+----
+cat > aiops/AGENTS.md << 'EOF'
+# AIOps Team Operational Context
+
+## Environment
+
+**Production Environment**:
+- 3 application servers (payment-api, inventory-api, user-api)
+- 1 PostgreSQL database (primary + read replica)
+- 1 Redis cache cluster
+- Kubernetes orchestration
+- Prometheus + Grafana monitoring
+
+**Resource Limits**:
+- Application containers: 512Mi memory, 1 CPU
+- Database: 4Gi memory, 2 CPU
+- Redis: 2Gi memory, 1 CPU
+
+**Connection Pools**:
+- Default max connections: 100 per service
+- Database max connections: 500 total
+- Typical load: 20-30 connections per service
+
+## Known Failure Modes
+
+1. **Connection Pool Exhaustion** (seen 3 times in last month)
+   - Usually during traffic spikes
+   - Often combined with slow database queries
+   - Resolution: increase pool size or optimize queries
+
+2. **Memory Leaks** (payment-api specifically)
+   - Gradual memory growth over 3-4 days
+   - Requires weekly restarts as workaround
+   - Fix in progress: PR #1247
+
+3. **Database Deadlocks** (rare but recurring)
+   - Complex transaction interactions
+   - Usually during bulk operations
+   - Retry logic handles most cases
+
+## Escalation Procedures
+
+**Low Risk Actions** (no escalation required):
+- Service restart
+- Scale up resources
+- Clear disk space
+
+**Medium Risk Actions** (notify on-call lead):
+- Rollback deployment
+- Connection pool reset
+- Configuration changes
+
+**High Risk Actions** (require senior approval):
+- Database failover
+- Emergency maintenance
+- Data restoration
+
+## Recent Incidents
+
+**2026-03-28**: payment-api OOM due to traffic spike during flash sale
+- Resolution: scaled up from 3 to 6 instances
+- Prevention: auto-scaling rules updated
+
+**2026-03-25**: inventory-api connection pool exhaustion
+- Resolution: increased pool size from 100 to 150
+- Prevention: monitoring alert added
+
+**2026-03-20**: user-api deployment rollback (authentication regression)
+- Resolution: rolled back to v2.4.1
+- Prevention: added auth integration tests
+EOF
+----
+
+This operational memory provides context that helps all agents make better decisions. The ops_manager and subagents can reference known failure modes, understand the environment topology, and follow correct escalation procedures.
+
+== Exercise 5: Human-in-the-Loop
+
+Now create the main agent with interrupt controls. The `interrupt_on` parameter creates human approval gates for specific tools:
+
+[source,role="execute"]
+----
+cat > aiops/agent.py << 'EOF'
+from pathlib import Path
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+from loader import load_subagents
+from tools import execute_remediation, fetch_logs, query_metrics
+
+# Create the ops_manager orchestrator
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    system_prompt="""You are an AIOps operations manager coordinating incident response.
+
+## Your Process
+
+When an incident is reported:
+
+1. **Analyze**: Delegate to sre_log_analyst to examine logs and metrics
+2. **Diagnose**: Send findings to sre_diagnostician for root cause analysis
+3. **Remediate**: If needed, delegate to sre_remediator with approval gate
+4. **Report**: Compile a final incident report with timeline and actions
+
+## Delegation Strategy
+
+- Use clear, specific task descriptions when delegating
+- Provide context from previous steps to each subagent
+- Coordinate the handoffs between specialists
+- Ensure human approval for any remediation actions
+
+## Incident Report Format
+
+Your final output should include:
+- Incident summary (what happened, when, impact)
+- Timeline of investigation and actions
+- Root cause analysis
+- Remediation actions taken
+- Follow-up recommendations""",
+    memory=["./aiops/AGENTS.md"],
+    skills=["./aiops/skills/"],
+    subagents=load_subagents(Path("aiops/subagents.yaml")),
+    tools=[fetch_logs, query_metrics, execute_remediation],
+    interrupt_on={"execute_remediation": True},
+    backend=FilesystemBackend(root_dir="./aiops"),
+)
+
+if __name__ == "__main__":
+    # Test with a realistic incident
+    result = agent.invoke({"messages": [("user",
+        "INCIDENT ALERT: Service 'payment-api' is returning 503 errors. "
+        "Error rate spiked from <1% to 23% in the last 10 minutes. "
+        "Multiple customers reporting failed transactions. "
+        "Investigate and propose remediation."
+    )]})
+
+    print(result["messages"][-1].content)
+EOF
+----
+
+The `interrupt_on` parameter is the key to human-in-the-loop control. When `execute_remediation` is called, the agent pauses and returns control to you. You can review the proposed action, approve it, or reject it. This prevents automated systems from making destructive changes without oversight.
+
+== Exercise 6: End-to-End Scenario
+
+Run the incident response scenario and observe the workflow:
+
+[source,role="execute"]
+----
+cd aiops
+python agent.py
+----
+
+Here's what happens under the hood:
+
+1. **ops_manager receives alert**: Parses the incident details (503 errors, 23% error rate, payment-api)
+
+2. **Delegates to sre_log_analyst**:
+   - Uses `task` tool with `subagent_type: "sre_log_analyst"`
+   - Log analyst fetches logs, queries metrics
+   - Loads log-analysis skill to apply pattern detection
+   - Returns findings: connection pool exhaustion followed by OOM kill
+
+3. **Delegates to sre_diagnostician**:
+   - Uses `task` tool with `subagent_type: "sre_diagnostician"`
+   - Diagnostician reviews log findings
+   - Loads diagnostics skill to apply decision tree
+   - Queries memory metrics to validate
+   - Returns diagnosis: memory at 97% of limit, connection pool exhausted due to memory pressure
+
+4. **Delegates to sre_remediator**:
+   - Uses `task` tool with `subagent_type: "sre_remediator"`
+   - Remediator reviews diagnosis
+   - Loads remediation skill to consult runbooks
+   - Proposes: scale up memory limit and restart service
+   - Calls `execute_remediation` tool
+   - **INTERRUPT**: Agent pauses, waits for human approval
+
+5. **Human approval**: You review the proposed action and approve
+
+6. **Remediation executes**: Service scaled up and restarted
+
+7. **ops_manager compiles report**: Final incident report with timeline, root cause, actions taken, and follow-up recommendations
+
+This workflow demonstrates hierarchical delegation, progressive skill loading, tool usage across subagents, and human control gates. Every pattern you've learned is exercised here.
+
+== Exercise 7: Iterate via Config
+
+The power of config-driven design is that you can evolve the system without touching code. Try these modifications:
+
+**Add a new subagent** (YAML only):
+
+[source,role="execute"]
+----
+cat >> aiops/subagents.yaml << 'EOF'
+
+sre_communicator:
+  description: >
+    Use this to draft stakeholder communications about incidents.
+    Expert at translating technical details into business-friendly
+    updates. Use after remediation to notify customers or leadership.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are an SRE communications specialist. You draft clear,
+    honest, and professional incident updates for stakeholders.
+
+    ## Your Process
+    1. Review incident details and remediation
+    2. Draft customer-facing status update (non-technical)
+    3. Draft internal incident summary (technical)
+    4. Recommend communication timing and channels
+
+    ## Tone
+    - Transparent about issues
+    - Clear about impact and resolution
+    - Professional and calm
+    - Avoid jargon in external communications
+EOF
+----
+
+No Python changes needed. The loader reads the new subagent definition, and ops_manager can now delegate communication tasks.
+
+**Swap log analyst to different model** (YAML only):
+
+[source,yaml]
+----
+sre_log_analyst:
+  model: anthropic:claude-sonnet-4-6  # Changed from haiku
+  # ... rest unchanged
+----
+
+Instant model upgrade. Maybe you've found that log analysis benefits from Sonnet's better reasoning. Just update the YAML.
+
+**Add a new skill** (SKILL.md only):
+
+[source,role="execute"]
+----
+mkdir -p aiops/skills/escalation
+cat > aiops/skills/escalation/SKILL.md << 'EOF'
+---
+name: escalation
+description: Procedures for escalating incidents based on severity, impact, and complexity.
+---
+
+# Escalation Skill
+
+## Escalation Triggers
+
+**Immediate Escalation**:
+- Customer data at risk
+- Security breach suspected
+- Multiple services down
+- Revenue-impacting outage >15 minutes
+
+**Standard Escalation**:
+- Root cause unclear after 30 minutes
+- Remediation requires high-risk actions
+- Cross-team coordination needed
+- Incident affecting >10% of users
+
+## Escalation Paths
+
+1. **On-call SRE Lead**: First escalation for technical decisions
+2. **Engineering Manager**: For deployment/rollback approvals
+3. **VP Engineering**: For customer-impacting decisions
+4. **Incident Commander**: For multi-team coordination
+
+## Communication Template
+
+When escalating, provide:
+- Incident summary (1-2 sentences)
+- Current impact (users affected, services down)
+- Actions taken so far
+- Reason for escalation
+- Recommended next steps
+EOF
+----
+
+Subagents now have escalation procedures. No code changes.
+
+The pattern is clear: configuration changes (YAML, SKILL.md, AGENTS.md) drive agent behavior. Python code is stable infrastructure. This is how you build systems that evolve rapidly without constant redeploy cycles.
+
+== Module Summary
+
+You built a production-style AIOps multi-agent system that synthesizes every concept from this workshop:
+
+**What you built**:
+- An ops_manager orchestrator coordinating specialized SRE subagents
+- Three specialist subagents (log analyst, diagnostician, remediator)
+- Domain-specific skills (log analysis, diagnostics, remediation)
+- Custom tools (fetch_logs, query_metrics, execute_remediation)
+- Operational memory (environment, failure modes, escalation)
+- Human approval gates (interrupt_on for remediation)
+- Config-driven evolution (YAML, SKILL.md, AGENTS.md)
+
+**All concepts exercised**:
+1. **System prompts**: Each agent has role-specific instructions
+2. **Planning**: ops_manager orchestrates multi-step workflows
+3. **Backends**: FilesystemBackend persists agent state
+4. **Custom tools**: Specialized observability and remediation tools
+5. **Subagents**: Hierarchical delegation with three specialists
+6. **YAML subagents**: Loader pattern for config-driven teams
+7. **Skills**: Progressive disclosure of domain knowledge
+8. **Memory**: AGENTS.md provides operational context
+9. **Human-in-the-loop**: Interrupt gates for safety
+10. **Config-driven design**: Evolution without code changes
+
+**The key pattern**: Configuration drives behavior. Code is infrastructure. This separation makes your agent systems maintainable, evolvable, and safe to operate at scale.
+
+This is the foundation for building real-world agentic systems. Start here, adapt the patterns to your domain, and build production-quality automation with confidence.

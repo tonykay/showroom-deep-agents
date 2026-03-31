@@ -1,0 +1,255 @@
+= Memory & AGENTS.md
+:source-highlighter: rouge
+
+Skills give agents on-demand capabilities, but memory gives them persistent context that shapes every conversation. This module shows you how to use the AGENTS.md convention to provide agents with project knowledge, coding standards, and other context that should always be present.
+
+== Exercise 1: The AGENTS.md spec
+
+Create an AGENTS.md file for a Python REST API project:
+
+[source,role="execute"]
+----
+cat > AGENTS.md << 'EOF'
+# Project Context
+
+This is a Python REST API project using FastAPI and SQLAlchemy.
+
+## Coding Standards
+- Use type hints on all functions
+- Write docstrings for public functions
+- Use async/await for database operations
+- Follow PEP 8 naming conventions
+
+## Architecture
+- `src/` contains application code
+- `tests/` contains pytest test files
+- `alembic/` contains database migrations
+
+## Known Issues
+- The user authentication module needs rate limiting (TODO)
+- Database connection pooling is not yet configured
+EOF
+----
+
+The https://agents.md/[AGENTS.md spec] defines a convention for persistent project context. It's like a README, but written specifically for agents rather than humans. The file lives in your project root and contains:
+
+- Project overview and technology stack
+- Coding standards and conventions
+- Architecture and directory structure
+- Known issues, TODOs, and important context
+- Anything else the agent should always know
+
+Unlike skills (which are loaded on demand), memory from AGENTS.md is always present in the agent's context.
+
+== Exercise 2: MemoryMiddleware
+
+Configure an agent with memory and observe how it uses the context:
+
+[source,python]
+----
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "What coding standards should I follow in this project?"
+)]})
+
+print(result["messages"][-1].content)
+----
+
+The agent references the coding standards from AGENTS.md without you explicitly providing them in the conversation. The MemoryMiddleware injects the contents of AGENTS.md into the system prompt, wrapped in `<agent_memory>` tags.
+
+The key difference from skills:
+
+- **Skills**: Loaded on demand when relevant to the task
+- **Memory**: Always present in the system prompt
+
+Use memory for context that should influence every interaction: coding standards, architecture principles, project constraints, team preferences.
+
+== Exercise 3: Self-updating memory
+
+Agents can modify their own AGENTS.md to learn and persist knowledge across conversations:
+
+[source,python]
+----
+result = agent.invoke({"messages": [("user",
+    "I just decided we should also use Pydantic V2 for all data validation. "
+    "Update the project's AGENTS.md to include this coding standard."
+)]})
+----
+
+Check the result:
+
+[source,role="execute"]
+----
+cat AGENTS.md
+----
+
+The agent uses its `edit_file` tool to update its own memory. The next time you start a conversation with this agent, the Pydantic V2 standard will be included in the context. This is how agents learn and persist knowledge across conversations.
+
+Benefits of self-updating memory:
+
+- Agents remember decisions and context from previous sessions
+- Knowledge compounds over time
+- No need to repeat information across conversations
+- The project's AGENTS.md becomes a living document
+
+== Exercise 4: Memory layering
+
+Load memory from multiple sources — project-level and user-level:
+
+[source,python]
+----
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md", "~/.deepagents/AGENTS.md"],
+)
+----
+
+Create a user-level AGENTS.md with personal preferences:
+
+[source,role="execute"]
+----
+mkdir -p ~/.deepagents
+cat > ~/.deepagents/AGENTS.md << 'EOF'
+# User Preferences
+- I prefer concise responses
+- Show code examples rather than lengthy explanations
+- Always use uv, never pip
+EOF
+----
+
+Both files are loaded and injected into the system prompt. The agent now has:
+
+- **Project context**: from `./AGENTS.md` (coding standards, architecture)
+- **User preferences**: from `~/.deepagents/AGENTS.md` (response style, tool choices)
+
+This layering pattern is useful for:
+
+- Separating project-specific context from personal preferences
+- Sharing user preferences across all projects
+- Overriding global defaults with project-specific context
+- Managing team-wide conventions in a shared file
+
+== Exercise 5: Memory + skills + subagents
+
+Combine all three patterns — memory, skills, and subagents — to build a fully-equipped agent:
+
+[source,python]
+----
+from deepagents import create_deep_agent
+
+subagents = [
+    {
+        "name": "researcher",
+        "description": "Research topics and gather information.",
+        "system_prompt": "You are a research assistant.",
+        "model": "anthropic:claude-haiku-4-5-20251001",
+    }
+]
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md"],
+    skills=["./skills/"],
+    subagents=subagents,
+)
+----
+
+Now give the agent a task that exercises all three capabilities:
+
+[source,python]
+----
+result = agent.invoke({"messages": [("user",
+    "Research the latest FastAPI best practices for async database operations, "
+    "then review our authentication.py file against those best practices. "
+    "Make sure your review follows our project's coding standards."
+)]})
+----
+
+What happens:
+
+1. **Memory**: Agent sees project context (FastAPI/SQLAlchemy, coding standards)
+2. **Subagent**: Agent delegates research to the researcher subagent
+3. **Skills**: Agent loads the code-review skill to structure the review
+4. **Memory again**: Agent applies project-specific coding standards to the review
+
+Full middleware stack order:
+
+1. **TodoList**: Manages task tracking and progress
+2. **Skills**: Discovers and loads skill definitions on demand
+3. **Filesystem**: Provides file read/write tools
+4. **SubAgent**: Enables task delegation to specialized agents
+5. **Summarization**: Condenses long conversations to manage context
+6. **PatchToolCalls**: Enhances tool calling reliability
+7. **AnthropicPromptCaching**: Reduces costs by caching system prompts
+8. **Memory**: Injects AGENTS.md content into system prompt
+9. **HumanInTheLoop**: Allows human approval for sensitive operations
+
+Memory sits near the bottom of the stack because it shapes the system prompt that all other middleware builds upon.
+
+== Exercise 6: Introducing a second model provider (OPTIONAL)
+
+Use different model providers for different subagents:
+
+[source,python]
+----
+subagents = [
+    {
+        "name": "researcher",
+        "description": "Research topics using web search.",
+        "system_prompt": "You are a research assistant.",
+        "model": "openai:gpt-4o",
+    },
+    {
+        "name": "analyst",
+        "description": "Deep analysis requiring careful reasoning.",
+        "system_prompt": "You are an analytical expert.",
+        "model": "anthropic:claude-sonnet-4-6",
+    },
+]
+----
+
+This requires setting up your OpenAI API key:
+
+[source,role="execute"]
+----
+export OPENAI_API_KEY=your-key-here
+----
+
+The `"provider:model"` format works with any LiteLLM-supported provider:
+
+- `anthropic:claude-sonnet-4-6`
+- `openai:gpt-4o`
+- `openai:gpt-4o-mini`
+- `google:gemini-pro`
+- `cohere:command-r-plus`
+
+This flexibility allows you to:
+
+- Use specialized models for specific tasks (e.g., cheaper models for simple research)
+- Experiment with different providers without changing your code structure
+- Optimize cost and performance by matching models to workloads
+- Take advantage of unique capabilities from different providers
+
+[NOTE]
+====
+The main agent and each subagent can use different models and providers. The framework handles the provider-specific details (authentication, API format, tool calling conventions) automatically.
+====
+
+== Module summary
+
+You've learned how memory gives agents persistent context:
+
+- **AGENTS.md spec**: Convention for project knowledge and coding standards
+- **MemoryMiddleware**: Injects memory into system prompt with `<agent_memory>` tags
+- **Self-updating memory**: Agents can edit their own AGENTS.md to learn over time
+- **Memory layering**: Load multiple sources (project + user preferences)
+- **Full stack**: Memory works alongside skills and subagents
+- **Multi-provider support**: Use any LiteLLM-supported model provider
+
+Memory is what transforms an agent from a stateless tool into a persistent collaborator that remembers your project's context, standards, and evolution over time.

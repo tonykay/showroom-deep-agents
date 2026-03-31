@@ -1,0 +1,170 @@
+= System Prompts & Planning
+:source-highlighter: rouge
+
+Now that you have a working agent from Module 1, it's time to learn how to control how it thinks and plans. Deep Agents gives you powerful tools to shape your agent's behavior through system prompts and planning strategies.
+
+== Exercise 1: Custom System Prompts
+
+Let's create an agent with a specific persona — a senior Python code reviewer:
+
+[source,role="execute"]
+----
+cat > review_agent.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    system_prompt="""You are a senior Python code reviewer.
+When reviewing code, always check for:
+1. Type safety and proper type hints
+2. Error handling
+3. Security vulnerabilities
+4. Performance considerations
+
+Be direct and specific in your feedback.""",
+)
+
+result = agent.invoke({"messages": [("user", """Review this code:
+
+def get_user(id):
+    data = eval(open(f"users/{id}.json").read())
+    return data
+""")]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+[source,role="execute"]
+----
+python review_agent.py
+----
+
+The `system_prompt` parameter is prepended to `BASE_AGENT_PROMPT` — the agent still has all its built-in capabilities (tool use, planning, etc.), but now also has your custom instructions. This lets you add domain expertise without losing the core agent behavior.
+
+== Exercise 2: The Base Prompt
+
+Let's explore what `BASE_AGENT_PROMPT` actually contains:
+
+[source,role="execute"]
+----
+cat > inspect_prompt.py << 'EOF'
+from deepagents.graph import BASE_AGENT_PROMPT
+
+print(BASE_AGENT_PROMPT[:2000])
+print(f"\n... ({len(BASE_AGENT_PROMPT)} total characters)")
+EOF
+----
+
+[source,role="execute"]
+----
+python inspect_prompt.py
+----
+
+You'll see this is no simple "you are a helpful assistant" prompt. It's a comprehensive instruction manual covering:
+
+- Detailed tool usage instructions
+- Behavioral guidelines for complex tasks
+- Output formatting expectations
+- Error handling strategies
+
+This is the "detailed system prompt" pillar in action — giving the LLM clear, specific guidance on how to operate as an agent.
+
+== Exercise 3: Planning with Todos
+
+For complex multi-step tasks, Deep Agents can plan out the work before executing. Let's see this in action:
+
+[source,role="execute"]
+----
+cat > planning_agent.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+
+result = agent.invoke({"messages": [("user",
+    "Create a Python project structure for a REST API with "
+    "user authentication, database models, and tests. "
+    "Plan out the work first, then create the files."
+)]})
+
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls'):
+        for tc in msg.tool_calls:
+            if tc['name'] == 'write_todos':
+                print("Planning step detected!")
+                print(f"Todos: {tc['args']}")
+EOF
+----
+
+[source,role="execute"]
+----
+python planning_agent.py
+----
+
+The `write_todos` tool is provided by `TodoListMiddleware` — a context engineering strategy. By giving the agent a way to write down a plan, it can break complex tasks into manageable steps and track progress.
+
+== Exercise 4: Guiding Planning Behavior
+
+You can use system prompts to influence how the agent plans:
+
+[source,role="execute"]
+----
+cat > guided_planning.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    system_prompt="""Before starting any task:
+1. Always create a todo list with write_todos
+2. Break work into steps of no more than 3 files each
+3. Complete and check off each step before moving to the next
+4. Never skip the planning phase""",
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a Python project structure for a REST API with "
+    "user authentication, database models, and tests."
+)]})
+
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls'):
+        for tc in msg.tool_calls:
+            if tc['name'] == 'write_todos':
+                print("Planning step detected!")
+                print(f"Todos: {tc['args']}")
+EOF
+----
+
+[source,role="execute"]
+----
+python guided_planning.py
+----
+
+Compare the planning behavior with and without the custom instructions. The system prompt gives you fine-grained control over the agent's approach.
+
+[NOTE]
+====
+**CLI Usage**: You can also pass system prompts via the CLI:
+[source,bash]
+----
+deepagents --system-prompt "You are a Python expert..." "Review my code"
+----
+====
+
+== Module Summary
+
+In this module, you accomplished:
+
+- Created agents with custom personas using `system_prompt`
+- Explored the comprehensive `BASE_AGENT_PROMPT`
+- Observed planning behavior with `write_todos`
+- Guided planning through system prompt instructions
+
+Key takeaways:
+
+- System prompts are prepended to the base prompt, adding domain expertise
+- The base prompt is a detailed instruction manual, not a simple directive
+- Todo lists are a context engineering strategy for complex tasks
+- System prompts can shape both what the agent does and how it plans
+
+Next up: you'll explore the filesystem tools and storage backends that make agents truly useful for code and file manipulation.

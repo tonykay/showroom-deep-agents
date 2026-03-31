@@ -1,19 +1,24 @@
-* xref:index.adoc[What is Showroom?]
+* xref:index.adoc[Deep Agents Workshop]
 
-.Content Developer Guide
-* xref:quick-start.adoc[Quick Start]
-* xref:content-repo.adoc[Creating a Content Repository]
-* xref:agnosticv-config.adoc[AgnosticV Configuration]
-* xref:ui-config.adoc[UI Configuration]
-* xref:user-data.adoc[User Data and Variables]
-* xref:attribute-example.adoc[Attribute Injection Example]
-* xref:ocp4-role-reference.adoc[OCP4 Role Reference]
-* xref:vm-role-reference.adoc[VM Role Reference]
+.Getting Started
+* xref:01-overview.adoc[Workshop Overview]
+* xref:02-details.adoc[Environment Setup]
 
-.Showroom Developer Guide
-* xref:architecture.adoc[Architecture]
-* xref:deployer.adoc[Showroom Deployer]
-* xref:images.adoc[Showroom Images]
-* xref:nookbag.adoc[Nookbag UI]
-* xref:ocp-integration.adoc[OCP Integration]
-* xref:contributing.adoc[Contributing]
+.Foundations
+* xref:03-first-agent.adoc[Your First Deep Agent]
+* xref:04-system-prompts-planning.adoc[System Prompts & Planning]
+* xref:05-filesystem-backends.adoc[Filesystem Tools & Backends]
+* xref:06-custom-tools.adoc[Custom Tools]
+
+.Multi-Agent Systems
+* xref:07-subagent-fundamentals.adoc[Subagent Fundamentals]
+* xref:08-yaml-subagents.adoc[YAML Subagents & the Loader Pattern]
+* xref:09-skills.adoc[Skills & Progressive Disclosure]
+* xref:10-memory.adoc[Memory & AGENTS.md]
+
+.CLI & Capstone
+* xref:11-cli.adoc[The Deep Agents CLI]
+* xref:12-capstone-aiops.adoc[Capstone: AIOps Team]
+
+.Wrap-Up
+* xref:99-conclusion.adoc[Conclusion & Next Steps]
