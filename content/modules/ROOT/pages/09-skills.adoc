@@ -1,0 +1,259 @@
+= Skills & Progressive Disclosure
+:source-highlighter: rouge
+
+Skills solve a token efficiency problem. Instead of loading every capability into the system prompt upfront, skills are discovered on demand. This module shows you how to use progressive disclosure to keep your agent's context lean and focused.
+
+== Exercise 1: What progressive disclosure solves
+
+Consider two approaches to equipping an agent with 20 different capabilities:
+
+**Approach A: Everything in the system prompt**
+
+Load all 20 capabilities upfront. Each capability includes detailed instructions, examples, and edge cases. Result: 50,000 tokens in the system prompt before the user even says hello.
+
+Problems:
+- Expensive: you pay for those tokens on every request
+- Diluted attention: the model must scan thousands of lines to find relevant context
+- Rigid: updating one capability means regenerating the entire prompt
+
+**Approach B: Progressive disclosure**
+
+Load a catalog with just names and descriptions (maybe 100 tokens per capability = 2,000 tokens total). When the agent needs a specific capability, it reads the full instructions on demand.
+
+Benefits:
+- Efficient: only pay for what you use
+- Focused: the model sees relevant details when it needs them
+- Flexible: update individual skills without touching the core prompt
+
+Token comparison for a simple request that uses 2 out of 20 capabilities:
+
+|===
+|Approach |System prompt |Skill bodies |Total
+
+|Everything upfront
+|50,000 tokens
+|0 tokens
+|50,000 tokens
+
+|Progressive disclosure
+|2,000 tokens (catalog)
+|5,000 tokens (2 skills)
+|7,000 tokens
+|===
+
+Progressive disclosure saves 86% of the tokens in this scenario.
+
+== Exercise 2: Your first SKILL.md
+
+Create a code review skill. First, make the directory structure:
+
+[source,role="execute"]
+----
+mkdir -p skills/code-review
+----
+
+Now create the skill definition:
+
+[source,role="execute"]
+----
+cat > skills/code-review/SKILL.md << 'EOF'
+---
+name: code-review
+description: Reviews Python code for bugs, security issues, and style problems. Use when asked to review, audit, or check code quality.
+---
+
+# Code Review Skill
+
+## Process
+1. Read the code file(s) to review
+2. Check for these categories of issues:
+   - **Bugs**: logic errors, off-by-one, null/None handling
+   - **Security**: injection, hardcoded secrets, unsafe eval/exec
+   - **Style**: naming conventions, function length, complexity
+   - **Performance**: unnecessary loops, missing caching opportunities
+3. Write findings to a review file with severity ratings (critical/warning/info)
+
+## Output Format
+Create a file called `review-{filename}.md` with:
+- Summary (1-2 sentences)
+- Issues table (severity, line, description, suggestion)
+- Overall assessment (approve / request changes)
+EOF
+----
+
+Now register the skill with your agent:
+
+[source,python]
+----
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    skills=["./skills/"],
+)
+----
+
+Understanding the SKILL.md format:
+
+- **YAML frontmatter** (between `---` markers): contains metadata
+  - `name`: must match the directory name (e.g., `code-review`)
+  - `description`: explains when to use the skill — this goes in the catalog and is always visible to the agent
+- **Markdown body**: contains the detailed instructions — this is only loaded when the agent invokes the skill
+
+The framework discovers skills by scanning directories for SKILL.md files. The name field must match the parent directory name. The description goes into the always-visible catalog. The body is read on demand.
+
+== Exercise 3: Skill invocation
+
+Observe progressive disclosure in action. Try two different requests:
+
+[source,python]
+----
+# Request 1: Triggers the code-review skill
+response = agent.run("Review the authentication.py file for security issues")
+
+# Request 2: Unrelated request
+response = agent.run("What's 15 * 23?")
+----
+
+In the first case, the agent:
+1. Sees "review" in your request
+2. Matches it to the code-review skill description in the catalog
+3. Reads the full SKILL.md body to understand the review process
+4. Executes the review according to those instructions
+
+In the second case, the agent:
+1. Sees a math question
+2. Checks the skill catalog
+3. Finds no relevant skills
+4. Answers directly without loading any skill bodies
+
+Check the tool call trace to see this behavior. When the skill is invoked, you'll see a tool call to read the SKILL.md file. When it's not needed, you won't see that read operation.
+
+== Exercise 4: Skills on subagents
+
+Equip a subagent with its own skills. Skills on subagents are isolated — the main agent doesn't see the subagent's skills and vice versa.
+
+[source,python]
+----
+reviewer_subagent = {
+    "name": "code-reviewer",
+    "description": "Reviews code for quality, security, and style issues.",
+    "system_prompt": "You are a code review specialist.",
+    "skills": ["./skills/"],
+}
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    subagents=[reviewer_subagent],
+)
+----
+
+When you delegate to the code-reviewer subagent, it has access to the code-review skill. The main agent doesn't see that skill in its own catalog.
+
+This isolation is useful when:
+- Different agent roles need different capabilities
+- You want to prevent skill conflicts or confusion
+- You're building specialized subagents with focused toolsets
+
+== Exercise 5: Skill layering
+
+Create a second skill source that overrides the default code-review skill with a security-focused version:
+
+[source,role="execute"]
+----
+mkdir -p skills-override/code-review
+cat > skills-override/code-review/SKILL.md << 'EOF'
+---
+name: code-review
+description: Reviews Python code with a security-first focus. Use when asked to review, audit, or check code quality.
+---
+
+# Security-Focused Code Review Skill
+
+## Process
+1. Read the code file(s) to review
+2. Prioritize security issues:
+   - **Critical**: SQL injection, command injection, path traversal
+   - **High**: hardcoded secrets, weak crypto, authentication bypass
+   - **Medium**: insecure defaults, missing input validation
+   - **Low**: information disclosure, verbose errors
+3. Include secondary checks for bugs and style
+4. Write findings to a review file with CVSS-style severity ratings
+
+## Output Format
+Create a file called `security-review-{filename}.md` with:
+- Executive summary highlighting critical issues
+- Detailed findings table (CVSS score, line, vulnerability type, remediation)
+- Security posture assessment (critical/needs improvement/acceptable)
+EOF
+----
+
+Now register both skill sources:
+
+[source,python]
+----
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    skills=["./skills/", "./skills-override/"],
+)
+----
+
+The last skill source wins. When multiple SKILL.md files have the same name, the one in the rightmost directory takes precedence. This is useful for:
+
+- Customizing skills per project without modifying the originals
+- Creating environment-specific variants (dev/staging/prod)
+- Overriding default behaviors in specific contexts
+
+== Exercise 6: Skills that delegate
+
+Create a skill whose instructions tell the agent to use the `task` tool with specific subagents. This combines the skills and subagents patterns:
+
+[source,role="execute"]
+----
+mkdir -p skills/research-and-write
+cat > skills/research-and-write/SKILL.md << 'EOF'
+---
+name: research-and-write
+description: Researches a topic and produces a written summary. Use when asked to write about a topic that requires current information.
+---
+
+# Research and Write Skill
+
+## Process
+1. Use the `task` tool with `subagent_type: "researcher"` to gather information
+2. Review the research results
+3. Use the `task` tool with `subagent_type: "writer"` to produce polished content
+4. Review the final output and make any necessary edits
+EOF
+----
+
+When the agent invokes this skill, it reads the instructions and learns to orchestrate two subagents in sequence. The skill acts as a workflow template.
+
+This pattern is powerful because:
+- Skills can encode multi-step processes
+- Each step can leverage specialized subagents
+- The main agent coordinates the overall workflow
+- Individual subagents stay focused on their specific tasks
+
+[NOTE]
+====
+**CLI support**: The `deepagents` CLI includes skill management commands:
+
+- `deepagents skills list` — show all available skills
+- Copy skills to `~/.deepagents/agent/skills/` for global availability across projects
+
+Skills in the global directory are automatically available to all agents unless overridden by project-specific skills.
+====
+
+== Module summary
+
+You've learned how progressive disclosure keeps agents efficient and focused:
+
+- **Token efficiency**: Load skill catalogs (names + descriptions) upfront, full instructions on demand
+- **SKILL.md format**: YAML frontmatter for metadata, markdown body for instructions
+- **Skill discovery**: Framework scans directories, matches names to directories
+- **Subagent isolation**: Skills on subagents are separate from main agent skills
+- **Skill layering**: Later skill sources override earlier ones (last-wins)
+- **Delegation patterns**: Skills can instruct agents to use subagents for multi-step workflows
+
+Progressive disclosure scales to dozens or hundreds of capabilities without bloating your context window. Use it whenever you have specialized knowledge that's only needed occasionally.
