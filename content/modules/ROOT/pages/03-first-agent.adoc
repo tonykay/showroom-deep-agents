@@ -111,6 +111,27 @@ MODEL = "ollama:llama3.1:8b"
 
 TIP: If you're using Ollama, make sure it's running locally (`ollama serve`) and that you've pulled the model first (`ollama pull llama3.1:8b`). No API key is needed for local models. Be aware that smaller local models may struggle with complex tool-use tasks in later modules -- the exercises were designed and tested with Claude Sonnet.
 
+IMPORTANT: Each provider requires its own LangChain integration package. If you switch providers and see an `ImportError`, install the corresponding package with `uv`:
+
+[cols="1,2",options="header"]
+|===
+|Provider |Install command
+
+|Anthropic
+|Included with `deepagents` (no extra install)
+
+|OpenAI
+|`uv add langchain-openai`
+
+|Ollama
+|`uv add langchain-ollama`
+
+|Google
+|`uv add langchain-google-genai`
+|===
+
+For example, if you see `ImportError: Initializing ChatOllama requires the langchain-ollama package`, just run `uv add langchain-ollama` in your project directory and re-run your script.
+
 Throughout this workshop, we use Anthropic's Claude Sonnet as the default because it handles tool-calling and multi-step reasoning reliably. But because we extract `MODEL` as a constant, you can experiment with any provider at any time.
 
 == Exercise 2: Streaming Responses
