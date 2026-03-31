@@ -36,15 +36,17 @@ This architecture demonstrates:
 
 == Exercise 1: Design the Team
 
-Start by creating the directory structure and defining the three specialized subagents in YAML:
+Start by creating the directory structure and defining the three specialized subagents in YAML.
 
+. Create the directory structure for the AIOps team:
++
 [source,role="execute"]
 ----
 mkdir -p aiops/skills/{log-analysis,diagnostics,remediation}
 ----
 
-Now define the subagent team:
-
+. Define the subagent team configuration:
++
 [source,role="execute"]
 ----
 cat > aiops/subagents.yaml << 'EOF'
@@ -165,8 +167,8 @@ Notice the progressive model selection: Haiku for data extraction, Sonnet for re
 
 Skills provide each subagent with specialized knowledge. Create three SKILL.md files—one for each specialist.
 
-First, the log analysis skill:
-
+. Create the log analysis skill:
++
 [source,role="execute"]
 ----
 cat > aiops/skills/log-analysis/SKILL.md << 'EOF'
@@ -236,8 +238,8 @@ Structure your findings:
 EOF
 ----
 
-Next, the diagnostics skill:
-
+. Create the diagnostics skill:
++
 [source,role="execute"]
 ----
 cat > aiops/skills/diagnostics/SKILL.md << 'EOF'
@@ -374,8 +376,8 @@ Rate your diagnostic confidence:
 EOF
 ----
 
-Finally, the remediation skill:
-
+. Create the remediation skill:
++
 [source,role="execute"]
 ----
 cat > aiops/skills/remediation/SKILL.md << 'EOF'
@@ -497,8 +499,10 @@ These skills provide each subagent with deep domain knowledge without bloating t
 
 == Exercise 3: Write the Loader
 
-Now create the custom tools and the loader function that wires everything together:
+Now create the custom tools and the loader function that wires everything together.
 
+. Create the custom tools:
++
 [source,role="execute"]
 ----
 cat > aiops/tools.py << 'EOF'
@@ -552,8 +556,8 @@ def query_metrics(service: str, metric: str) -> str:
 EOF
 ----
 
-Now create the loader that handles both tools and skills:
-
+. Create the loader that handles both tools and skills:
++
 [source,role="execute"]
 ----
 cat > aiops/loader.py << 'EOF'
@@ -607,8 +611,10 @@ This loader extends the pattern from Module 6 to handle skills. When it encounte
 
 == Exercise 4: Wire Up Memory
 
-Create an AGENTS.md file with operational context that all agents can reference:
+Create an AGENTS.md file with operational context that all agents can reference.
 
+. Create the operational memory file:
++
 [source,role="execute"]
 ----
 cat > aiops/AGENTS.md << 'EOF'
@@ -687,8 +693,10 @@ This operational memory provides context that helps all agents make better decis
 
 == Exercise 5: Human-in-the-Loop
 
-Now create the main agent with interrupt controls. The `interrupt_on` parameter creates human approval gates for specific tools:
+Now create the main agent with interrupt controls. The `interrupt_on` parameter creates human approval gates for specific tools.
 
+. Create the main agent with interrupt controls:
++
 [source,role="execute"]
 ----
 cat > aiops/agent.py << 'EOF'
@@ -752,12 +760,28 @@ The `interrupt_on` parameter is the key to human-in-the-loop control. When `exec
 
 == Exercise 6: End-to-End Scenario
 
-Run the incident response scenario and observe the workflow:
+Run the incident response scenario and observe the workflow.
 
+. Run the incident response scenario:
++
 [source,role="execute"]
 ----
 cd aiops
 python agent.py
+----
++
+.Expected workflow
+----
+The agent will coordinate a multi-step incident response:
+1. ops_manager receives alert and parses incident details
+2. Delegates to sre_log_analyst for log analysis
+3. Delegates to sre_diagnostician for root cause analysis
+4. Delegates to sre_remediator for remediation planning
+5. Pauses at interrupt gate for human approval
+6. Compiles final incident report
+
+You will see detailed agent reasoning, tool calls, and subagent
+coordination as the workflow progresses.
 ----
 
 Here's what happens under the hood:
@@ -795,10 +819,10 @@ This workflow demonstrates hierarchical delegation, progressive skill loading, t
 
 == Exercise 7: Iterate via Config
 
-The power of config-driven design is that you can evolve the system without touching code. Try these modifications:
+The power of config-driven design is that you can evolve the system without touching code. Try these modifications.
 
-**Add a new subagent** (YAML only):
-
+. Add a new subagent (YAML only):
++
 [source,role="execute"]
 ----
 cat >> aiops/subagents.yaml << 'EOF'
@@ -826,22 +850,24 @@ sre_communicator:
     - Avoid jargon in external communications
 EOF
 ----
-
++
 No Python changes needed. The loader reads the new subagent definition, and ops_manager can now delegate communication tasks.
 
-**Swap log analyst to different model** (YAML only):
-
+. Swap the log analyst to a different model (YAML only):
++
+Edit `aiops/subagents.yaml` and change the model for `sre_log_analyst`:
++
 [source,yaml]
 ----
 sre_log_analyst:
   model: anthropic:claude-sonnet-4-6  # Changed from haiku
   # ... rest unchanged
 ----
-
++
 Instant model upgrade. Maybe you've found that log analysis benefits from Sonnet's better reasoning. Just update the YAML.
 
-**Add a new skill** (SKILL.md only):
-
+. Add a new skill (SKILL.md only):
++
 [source,role="execute"]
 ----
 mkdir -p aiops/skills/escalation
@@ -884,9 +910,9 @@ When escalating, provide:
 - Recommended next steps
 EOF
 ----
-
++
 Subagents now have escalation procedures. No code changes.
-
++
 The pattern is clear: configuration changes (YAML, SKILL.md, AGENTS.md) drive agent behavior. Python code is stable infrastructure. This is how you build systems that evolve rapidly without constant redeploy cycles.
 
 == Module Summary
