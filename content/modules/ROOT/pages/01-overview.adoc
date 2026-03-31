@@ -1,0 +1,101 @@
+= Workshop Overview
+
+Welcome to the Deep Agents workshop. In this hands-on tutorial, you'll learn how to build sophisticated AI agents that go far beyond simple chat interfaces — agents that can plan, use tools, delegate to specialists, and manage complex workflows.
+
+== What are Deep Agents?
+
+Deep Agents is an open-source "agent harness" created by LangChain, released under the MIT license. It's not just another tool-calling LLM loop — it's a production-ready framework inspired by Claude Code that brings together planning, tool use, subagent delegation, and context management into a cohesive system.
+
+You can install it with a simple `uv add deepagents` command.
+
+**Ecosystem positioning:**
+
+* `deepagents` = agent harness (opinionated, ready-to-run)
+* `langchain` = agent framework (building blocks)
+* `langgraph` = agent runtime (execution infrastructure)
+
+Under the hood, `create_deep_agent()` returns a compiled LangGraph graph, giving you access to the full power of LangGraph's execution model while abstracting away the boilerplate.
+
+== The Four Pillars
+
+Deep Agents is built on four foundational pillars that work together to create capable, reliable agents:
+
+=== 1. Detailed System Prompt
+
+Every Deep Agent starts with a comprehensive base prompt that teaches the model how to use tools effectively, how to reason about problems, and how to interact with users. This isn't just a simple instruction — it's a carefully crafted guide that shapes agent behavior. You can extend or replace the default prompt to customize your agent's personality and capabilities.
+
+=== 2. Planning (TodoListMiddleware)
+
+Rather than reacting blindly to user requests, Deep Agents can create explicit plans using the `write_todos` tool. The TodoListMiddleware enables agents to break down complex tasks into manageable steps, track progress, and adjust plans as they learn more. This is a context engineering strategy that helps agents stay focused and organized across multi-step workflows.
+
+=== 3. Sub-agents
+
+When a task requires specialized expertise or a focused context window, Deep Agents can spawn ephemeral child agents via the `task` tool. Each subagent gets its own isolated context, tools, and even a different model. This enables powerful delegation patterns where a coordinator agent orchestrates multiple specialist agents, each focused on their domain.
+
+=== 4. Filesystem Access
+
+Built-in file tools (`read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `execute`) give agents the ability to read and modify files, search codebases, and run commands. These tools work with pluggable backends — the default FilesystemBackend provides real disk access, while StateBackend enables in-memory testing. This abstraction makes agents portable and testable.
+
+[mermaid]
+....
+graph TD
+    A[Deep Agent] --> B[System Prompt]
+    A --> C[Planning / Todos]
+    A --> D[Sub-agents]
+    A --> E[Filesystem / Backends]
+    D --> F[task tool]
+    F --> G[Isolated Context]
+....
+
+== What you'll build
+
+This workshop is structured as a progressive journey through 10 hands-on modules:
+
+[cols="1,3,5",options="header"]
+|===
+|Module |Title |Description
+
+|1
+|Your First Deep Agent
+|Install Deep Agents, create your first agent, invoke it, and stream responses
+
+|2
+|System Prompts & Planning
+|Customize agent behavior with custom prompts, understand BASE_AGENT_PROMPT, enable TodoListMiddleware
+
+|3
+|Filesystem Tools & Backends
+|Work with file tools, implement FilesystemBackend and StateBackend for testing
+
+|4
+|Custom Tools
+|Define custom tools with @tool decorator, Pydantic V2 schemas, and interrupt_on patterns
+
+|5
+|Subagent Fundamentals
+|Create SubAgent dicts, use the task tool, leverage context isolation and model routing
+
+|6
+|YAML Subagents & Loader Pattern
+|Define subagents in subagents.yaml and load them with the load_subagents() helper
+
+|7
+|Skills & Progressive Disclosure
+|Build SKILL.md files, layer skills progressively, attach skills to subagents
+
+|8
+|Memory & AGENTS.md
+|Enable MemoryMiddleware for self-updating agent memory across sessions
+
+|9
+|The Deep Agents CLI
+|Explore the TUI, headless mode, and CLI-specific skills
+
+|10
+|Capstone: AIOps Team
+|Build a multi-agent ops team with ops_manager coordinating sre_* specialist subagents
+|===
+
+== Target audience
+
+This workshop is designed for Python developers who are familiar with LLM APIs (like OpenAI's ChatCompletion or Anthropic's Messages API). You don't need deep LangChain or LangGraph expertise — we'll provide light refreshers on relevant concepts as we go. By the end, you'll understand how to architect, build, and deploy sophisticated multi-agent systems.
