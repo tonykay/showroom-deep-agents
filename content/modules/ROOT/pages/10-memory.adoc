@@ -5,8 +5,18 @@ Skills give agents on-demand capabilities, but memory gives them persistent cont
 
 == Exercise 1: The AGENTS.md spec
 
-Create an AGENTS.md file for a Python REST API project:
+The https://agents.md/[AGENTS.md spec] defines a convention for persistent project context. It's like a README, but written specifically for agents rather than humans. The file lives in your project root and contains:
 
+- Project overview and technology stack
+- Coding standards and conventions
+- Architecture and directory structure
+- Known issues, TODOs, and important context
+- Anything else the agent should always know
+
+Unlike skills (which are loaded on demand), memory from AGENTS.md is always present in the agent's context.
+
+. Create an AGENTS.md file for a Python REST API project:
++
 [source,role="execute"]
 ----
 cat > AGENTS.md << 'EOF'
@@ -31,22 +41,22 @@ This is a Python REST API project using FastAPI and SQLAlchemy.
 EOF
 ----
 
-The https://agents.md/[AGENTS.md spec] defines a convention for persistent project context. It's like a README, but written specifically for agents rather than humans. The file lives in your project root and contains:
-
-- Project overview and technology stack
-- Coding standards and conventions
-- Architecture and directory structure
-- Known issues, TODOs, and important context
-- Anything else the agent should always know
-
-Unlike skills (which are loaded on demand), memory from AGENTS.md is always present in the agent's context.
-
 == Exercise 2: MemoryMiddleware
 
-Configure an agent with memory and observe how it uses the context:
+The agent references the coding standards from AGENTS.md without you explicitly providing them in the conversation. The MemoryMiddleware injects the contents of AGENTS.md into the system prompt, wrapped in `<agent_memory>` tags.
 
-[source,python]
+The key difference from skills:
+
+- **Skills**: Loaded on demand when relevant to the task
+- **Memory**: Always present in the system prompt
+
+Use memory for context that should influence every interaction: coding standards, architecture principles, project constraints, team preferences.
+
+. Create a script to configure an agent with memory and observe how it uses the context:
++
+[source,role="execute"]
 ----
+cat > test_memory.py << 'EOF'
 from deepagents import create_deep_agent
 
 agent = create_deep_agent(
@@ -59,37 +69,87 @@ result = agent.invoke({"messages": [("user",
 )]})
 
 print(result["messages"][-1].content)
+EOF
 ----
 
-The agent references the coding standards from AGENTS.md without you explicitly providing them in the conversation. The MemoryMiddleware injects the contents of AGENTS.md into the system prompt, wrapped in `<agent_memory>` tags.
+. Run the script:
++
+[source,role="execute"]
+----
+uv run python test_memory.py
+----
++
+.Sample output
+----
+Based on the project's coding standards, you should follow these practices:
 
-The key difference from skills:
-
-- **Skills**: Loaded on demand when relevant to the task
-- **Memory**: Always present in the system prompt
-
-Use memory for context that should influence every interaction: coding standards, architecture principles, project constraints, team preferences.
+1. Use type hints on all functions
+2. Write docstrings for public functions
+3. Use async/await for database operations
+4. Follow PEP 8 naming conventions
+...
+----
 
 == Exercise 3: Self-updating memory
 
-Agents can modify their own AGENTS.md to learn and persist knowledge across conversations:
+Agents can modify their own AGENTS.md to learn and persist knowledge across conversations. The agent uses its `edit_file` tool to update its own memory. The next time you start a conversation with this agent, the Pydantic V2 standard will be included in the context. This is how agents learn and persist knowledge across conversations.
 
-[source,python]
+. Create a script to ask the agent to update its own AGENTS.md:
++
+[source,role="execute"]
 ----
+cat > update_memory.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md"],
+)
+
 result = agent.invoke({"messages": [("user",
     "I just decided we should also use Pydantic V2 for all data validation. "
     "Update the project's AGENTS.md to include this coding standard."
 )]})
+
+print(result["messages"][-1].content)
+EOF
 ----
 
-Check the result:
+. Run the script:
++
+[source,role="execute"]
+----
+uv run python update_memory.py
+----
++
+.Sample output
+----
+I've updated the AGENTS.md file to include the Pydantic V2 coding standard. The change has been added to the Coding Standards section.
+----
 
+. Verify the change:
++
 [source,role="execute"]
 ----
 cat AGENTS.md
 ----
++
+.Expected output
+----
+# Project Context
 
-The agent uses its `edit_file` tool to update its own memory. The next time you start a conversation with this agent, the Pydantic V2 standard will be included in the context. This is how agents learn and persist knowledge across conversations.
+This is a Python REST API project using FastAPI and SQLAlchemy.
+
+## Coding Standards
+- Use type hints on all functions
+- Write docstrings for public functions
+- Use async/await for database operations
+- Follow PEP 8 naming conventions
+- Use Pydantic V2 for all data validation
+
+## Architecture
+...
+----
 
 Benefits of self-updating memory:
 
@@ -99,29 +159,6 @@ Benefits of self-updating memory:
 - The project's AGENTS.md becomes a living document
 
 == Exercise 4: Memory layering
-
-Load memory from multiple sources — project-level and user-level:
-
-[source,python]
-----
-agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
-    memory=["./AGENTS.md", "~/.deepagents/AGENTS.md"],
-)
-----
-
-Create a user-level AGENTS.md with personal preferences:
-
-[source,role="execute"]
-----
-mkdir -p ~/.deepagents
-cat > ~/.deepagents/AGENTS.md << 'EOF'
-# User Preferences
-- I prefer concise responses
-- Show code examples rather than lengthy explanations
-- Always use uv, never pip
-EOF
-----
 
 Both files are loaded and injected into the system prompt. The agent now has:
 
@@ -135,41 +172,57 @@ This layering pattern is useful for:
 - Overriding global defaults with project-specific context
 - Managing team-wide conventions in a shared file
 
-== Exercise 5: Memory + skills + subagents
-
-Combine all three patterns — memory, skills, and subagents — to build a fully-equipped agent:
-
-[source,python]
+. Create a user-level AGENTS.md with personal preferences:
++
+[source,role="execute"]
 ----
-from deepagents import create_deep_agent
+mkdir -p ~/.deepagents
+cat > ~/.deepagents/AGENTS.md << 'EOF'
+# User Preferences
+- I prefer concise responses
+- Show code examples rather than lengthy explanations
+- Always use uv, never pip
+EOF
+----
 
-subagents = [
-    {
-        "name": "researcher",
-        "description": "Research topics and gather information.",
-        "system_prompt": "You are a research assistant.",
-        "model": "anthropic:claude-haiku-4-5-20251001",
-    }
-]
+. Create a script to load memory from multiple sources — project-level and user-level:
++
+[source,role="execute"]
+----
+cat > layered_memory.py << 'EOF'
+from deepagents import create_deep_agent
 
 agent = create_deep_agent(
     model="anthropic:claude-sonnet-4-6",
-    memory=["./AGENTS.md"],
-    skills=["./skills/"],
-    subagents=subagents,
+    memory=["./AGENTS.md", "~/.deepagents/AGENTS.md"],
 )
-----
 
-Now give the agent a task that exercises all three capabilities:
-
-[source,python]
-----
 result = agent.invoke({"messages": [("user",
-    "Research the latest FastAPI best practices for async database operations, "
-    "then review our authentication.py file against those best practices. "
-    "Make sure your review follows our project's coding standards."
+    "How should I install dependencies for this project?"
 )]})
+
+print(result["messages"][-1].content)
+EOF
 ----
+
+. Run the script:
++
+[source,role="execute"]
+----
+uv run python layered_memory.py
+----
++
+.Sample output
+----
+Use uv to install dependencies:
+
+```bash
+uv pip install -r requirements.txt
+```
+...
+----
+
+== Exercise 5: Memory + skills + subagents
 
 What happens:
 
@@ -192,34 +245,61 @@ Full middleware stack order:
 
 Memory sits near the bottom of the stack because it shapes the system prompt that all other middleware builds upon.
 
-== Exercise 6: Introducing a second model provider (OPTIONAL)
-
-Use different model providers for different subagents:
-
-[source,python]
+. Create a script to combine all three patterns — memory, skills, and subagents — to build a fully-equipped agent:
++
+[source,role="execute"]
 ----
+cat > full_stack.py << 'EOF'
+from deepagents import create_deep_agent
+
 subagents = [
     {
         "name": "researcher",
-        "description": "Research topics using web search.",
+        "description": "Research topics and gather information.",
         "system_prompt": "You are a research assistant.",
-        "model": "openai:gpt-4o",
-    },
-    {
-        "name": "analyst",
-        "description": "Deep analysis requiring careful reasoning.",
-        "system_prompt": "You are an analytical expert.",
-        "model": "anthropic:claude-sonnet-4-6",
-    },
+        "model": "anthropic:claude-haiku-4-5-20251001",
+    }
 ]
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md"],
+    skills=["./skills/"],
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the latest FastAPI best practices for async database operations, "
+    "then review our authentication.py file against those best practices. "
+    "Make sure your review follows our project's coding standards."
+)]})
+
+print(result["messages"][-1].content)
+EOF
 ----
 
-This requires setting up your OpenAI API key:
-
+. Run the script:
++
 [source,role="execute"]
 ----
-export OPENAI_API_KEY=your-key-here
+uv run python full_stack.py
 ----
++
+.Sample output
+----
+I'll research FastAPI best practices and review authentication.py.
+
+[Delegating to researcher subagent...]
+[Loading code-review skill...]
+...
+Review complete. The authentication.py file follows most best practices but needs:
+1. Type hints on async functions
+2. Docstrings for public methods
+3. Connection pooling configuration
+...
+----
+
+== Exercise 6: Introducing a second model provider (OPTIONAL)
 
 The `"provider:model"` format works with any LiteLLM-supported provider:
 
@@ -235,6 +315,69 @@ This flexibility allows you to:
 - Experiment with different providers without changing your code structure
 - Optimize cost and performance by matching models to workloads
 - Take advantage of unique capabilities from different providers
+
+. Set up your OpenAI API key:
++
+[source,role="execute"]
+----
+export OPENAI_API_KEY=your-key-here
+----
+
+. Create a script to use different model providers for different subagents:
++
+[source,role="execute"]
+----
+cat > multi_provider.py << 'EOF'
+from deepagents import create_deep_agent
+
+subagents = [
+    {
+        "name": "researcher",
+        "description": "Research topics using web search.",
+        "system_prompt": "You are a research assistant.",
+        "model": "openai:gpt-4o",
+    },
+    {
+        "name": "analyst",
+        "description": "Deep analysis requiring careful reasoning.",
+        "system_prompt": "You are an analytical expert.",
+        "model": "anthropic:claude-sonnet-4-6",
+    },
+]
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    memory=["./AGENTS.md"],
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the top 3 Python async frameworks and have the analyst compare them."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+. Run the script:
++
+[source,role="execute"]
+----
+uv run python multi_provider.py
+----
++
+.Sample output
+----
+[Delegating research to researcher subagent using GPT-4o...]
+Top 3 frameworks: FastAPI, Tornado, aiohttp
+
+[Delegating analysis to analyst subagent using Claude Sonnet...]
+Comparative analysis:
+1. FastAPI: Best for REST APIs, modern features, automatic validation
+2. Tornado: Best for WebSockets, long-lived connections
+3. aiohttp: Best for HTTP clients and servers, flexible
+...
+----
 
 [NOTE]
 ====
