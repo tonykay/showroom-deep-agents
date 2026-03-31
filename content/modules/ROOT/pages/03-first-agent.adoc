@@ -25,7 +25,9 @@ You'll see just how little code it takes to get started.
 cat > hello_agent.py << 'EOF'
 from deepagents import create_deep_agent
 
-agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+MODEL = "anthropic:claude-sonnet-4-6"
+
+agent = create_deep_agent(model=MODEL)
 
 result = agent.invoke({"messages": [("user",
     "List your tools. Be brief — just name and one-line description for each."
@@ -79,7 +81,9 @@ Let's switch to streaming mode.
 cat > streaming_agent.py << 'EOF'
 from deepagents import create_deep_agent
 
-agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+MODEL = "anthropic:claude-sonnet-4-6"
+
+agent = create_deep_agent(model=MODEL)
 
 for event in agent.stream({"messages": [("user", "Write a haiku about Python programming")]}):
     for key, value in event.items():
@@ -123,7 +127,9 @@ Let's take a closer look at those built-in tools.
 cat > explore_tools.py << 'EOF'
 from deepagents import create_deep_agent
 
-agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+MODEL = "anthropic:claude-sonnet-4-6"
+
+agent = create_deep_agent(model=MODEL)
 
 result = agent.invoke({"messages": [("user", "List all the tools you have access to and briefly describe each one.")]})
 

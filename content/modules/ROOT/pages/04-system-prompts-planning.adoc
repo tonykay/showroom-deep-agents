@@ -14,8 +14,10 @@ Let's create an agent with a specific persona — a senior Python code reviewer.
 cat > review_agent.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     system_prompt="""You are a senior Python code reviewer.
 When reviewing code, always check for:
 1. Type safety and proper type hints
@@ -139,7 +141,9 @@ For complex multi-step tasks, Deep Agents can plan out the work before executing
 cat > planning_agent.py << 'EOF'
 from deepagents import create_deep_agent
 
-agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+MODEL = "anthropic:claude-sonnet-4-6"
+
+agent = create_deep_agent(model=MODEL)
 
 result = agent.invoke({"messages": [("user",
     "Create a Python project structure for a REST API with "
@@ -189,8 +193,10 @@ You can use system prompts to influence how the agent plans.
 cat > guided_planning.py << 'EOF'
 from deepagents import create_deep_agent
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     system_prompt="""Before starting any task:
 1. Always create a todo list with write_todos
 2. Break work into steps of no more than 3 files each

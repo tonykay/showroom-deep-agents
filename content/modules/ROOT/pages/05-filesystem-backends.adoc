@@ -22,8 +22,10 @@ cat > file_tools.py << 'EOF'
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     backend=FilesystemBackend(root_dir="./workspace"),
 )
 
@@ -85,8 +87,10 @@ cat > execute_tool.py << 'EOF'
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     backend=FilesystemBackend(root_dir="./workspace"),
 )
 
@@ -140,10 +144,12 @@ cat > scoped_backend.py << 'EOF'
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 backend = FilesystemBackend(root_dir="./workspace/myproject")
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     backend=backend,
 )
 
@@ -194,8 +200,10 @@ cat > state_backend.py << 'EOF'
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     backend=StateBackend(),
 )
 
