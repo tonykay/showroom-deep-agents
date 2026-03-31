@@ -130,7 +130,7 @@ response = agent.run("Review the authentication.py file for security issues")
 # Request 2: Unrelated request
 response = agent.run("What's 15 * 23?")
 EOF
-python test_skill_invocation.py
+uv run python test_skill_invocation.py
 ----
 +
 .Sample output (your results may vary)
@@ -186,7 +186,7 @@ agent = create_deep_agent(
 response = agent.run("Please review authentication.py")
 print(response)
 EOF
-python test_subagent_skills.py
+uv run python test_subagent_skills.py
 ----
 +
 .Sample output (your results may vary)
@@ -259,7 +259,7 @@ agent = create_deep_agent(
 response = agent.run("Review the authentication.py file")
 print(response)
 EOF
-python test_skill_layering.py
+uv run python test_skill_layering.py
 ----
 +
 .Sample output (your results may vary)
@@ -320,7 +320,7 @@ agent = create_deep_agent(
 response = agent.run("Write a summary about progressive disclosure in AI agents")
 print(response)
 EOF
-python test_skill_delegation.py
+uv run python test_skill_delegation.py
 ----
 +
 .Sample output (your results may vary)
