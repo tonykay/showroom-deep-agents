@@ -45,15 +45,17 @@ Progressive disclosure saves 86% of the tokens in this scenario.
 
 == Exercise 2: Your first SKILL.md
 
-Create a code review skill. First, make the directory structure:
+Create a code review skill.
 
+. Create the directory structure:
++
 [source,role="execute"]
 ----
 mkdir -p skills/code-review
 ----
 
-Now create the skill definition:
-
+. Create the skill definition:
++
 [source,role="execute"]
 ----
 cat > skills/code-review/SKILL.md << 'EOF'
@@ -81,7 +83,7 @@ Create a file called `review-{filename}.md` with:
 EOF
 ----
 
-Now register the skill with your agent:
+. Register the skill with your agent:
 
 [source,python]
 ----
@@ -104,15 +106,38 @@ The framework discovers skills by scanning directories for SKILL.md files. The n
 
 == Exercise 3: Skill invocation
 
-Observe progressive disclosure in action. Try two different requests:
+Observe progressive disclosure in action.
 
-[source,python]
+. Try two different requests:
++
+[source,role="execute"]
 ----
+cat > test_skill_invocation.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    skills=["./skills/"],
+)
+
 # Request 1: Triggers the code-review skill
 response = agent.run("Review the authentication.py file for security issues")
 
 # Request 2: Unrelated request
 response = agent.run("What's 15 * 23?")
+EOF
+python test_skill_invocation.py
+----
++
+.Sample output
+----
+[Request 1 - Triggers code-review skill]
+Reading skills/code-review/SKILL.md...
+Reading authentication.py...
+Creating review-authentication.py.md...
+
+[Request 2 - No skill needed]
+345
 ----
 
 In the first case, the agent:
@@ -133,8 +158,13 @@ Check the tool call trace to see this behavior. When the skill is invoked, you'l
 
 Equip a subagent with its own skills. Skills on subagents are isolated — the main agent doesn't see the subagent's skills and vice versa.
 
-[source,python]
+. Create an agent with a subagent that has its own skills:
++
+[source,role="execute"]
 ----
+cat > test_subagent_skills.py << 'EOF'
+from deepagents import create_deep_agent
+
 reviewer_subagent = {
     "name": "code-reviewer",
     "description": "Reviews code for quality, security, and style issues.",
@@ -146,6 +176,22 @@ agent = create_deep_agent(
     model="anthropic:claude-sonnet-4-6",
     subagents=[reviewer_subagent],
 )
+
+response = agent.run("Please review authentication.py")
+print(response)
+EOF
+python test_subagent_skills.py
+----
++
+.Sample output
+----
+Delegating to code-reviewer subagent...
+Reading skills/code-review/SKILL.md...
+Reading authentication.py...
+Creating review-authentication.py.md...
+
+Review completed. Found 3 security issues and 2 style warnings.
+See review-authentication.py.md for details.
 ----
 
 When you delegate to the code-reviewer subagent, it has access to the code-review skill. The main agent doesn't see that skill in its own catalog.
@@ -157,8 +203,10 @@ This isolation is useful when:
 
 == Exercise 5: Skill layering
 
-Create a second skill source that overrides the default code-review skill with a security-focused version:
+Create a second skill source that overrides the default code-review skill with a security-focused version.
 
+. Create the override skill directory and definition:
++
 [source,role="execute"]
 ----
 mkdir -p skills-override/code-review
@@ -188,14 +236,32 @@ Create a file called `security-review-{filename}.md` with:
 EOF
 ----
 
-Now register both skill sources:
-
-[source,python]
+. Register both skill sources (last one wins):
++
+[source,role="execute"]
 ----
+cat > test_skill_layering.py << 'EOF'
+from deepagents import create_deep_agent
+
 agent = create_deep_agent(
     model="anthropic:claude-sonnet-4-6",
     skills=["./skills/", "./skills-override/"],
 )
+
+response = agent.run("Review the authentication.py file")
+print(response)
+EOF
+python test_skill_layering.py
+----
++
+.Sample output
+----
+Reading skills-override/code-review/SKILL.md...
+Reading authentication.py...
+Creating security-review-authentication.py.md...
+
+Security review completed.
+See security-review-authentication.py.md for details.
 ----
 
 The last skill source wins. When multiple SKILL.md files have the same name, the one in the rightmost directory takes precedence. This is useful for:
@@ -206,8 +272,10 @@ The last skill source wins. When multiple SKILL.md files have the same name, the
 
 == Exercise 6: Skills that delegate
 
-Create a skill whose instructions tell the agent to use the `task` tool with specific subagents. This combines the skills and subagents patterns:
+Create a skill whose instructions tell the agent to use the `task` tool with specific subagents. This combines the skills and subagents patterns.
 
+. Create a skill that delegates to subagents:
++
 [source,role="execute"]
 ----
 mkdir -p skills/research-and-write
@@ -225,6 +293,33 @@ description: Researches a topic and produces a written summary. Use when asked t
 3. Use the `task` tool with `subagent_type: "writer"` to produce polished content
 4. Review the final output and make any necessary edits
 EOF
+----
+
+. Test the delegation workflow:
++
+[source,role="execute"]
+----
+cat > test_skill_delegation.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    skills=["./skills/"],
+)
+
+response = agent.run("Write a summary about progressive disclosure in AI agents")
+print(response)
+EOF
+python test_skill_delegation.py
+----
++
+.Sample output
+----
+Reading skills/research-and-write/SKILL.md...
+Delegating to researcher subagent...
+Research complete. Found 5 sources.
+Delegating to writer subagent...
+Summary written to progressive-disclosure-summary.md
 ----
 
 When the agent invokes this skill, it reads the instructions and learns to orchestrate two subagents in sequence. The skill acts as a workflow template.
