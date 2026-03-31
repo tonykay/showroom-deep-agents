@@ -706,9 +706,11 @@ from deepagents.backends import FilesystemBackend
 from loader import load_subagents
 from tools import execute_remediation, fetch_logs, query_metrics
 
+MODEL = "anthropic:claude-sonnet-4-6"
+
 # Create the ops_manager orchestrator
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     system_prompt="""You are an AIOps operations manager coordinating incident response.
 
 ## Your Process
