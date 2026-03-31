@@ -161,10 +161,19 @@ agent = create_deep_agent(model=MODEL)
 
 for event in agent.stream({"messages": [("user", "Write a haiku about Python programming")]}):
     for value in event.values():
-        if isinstance(value, dict) and "messages" in value:
-            for msg in value["messages"]:
-                if hasattr(msg, 'content') and msg.content:
-                    print(msg.content, end="", flush=True)
+        if not isinstance(value, dict):
+            continue
+        messages = value.get("messages")
+        if messages is None:
+            continue
+        # LangGraph may wrap messages in an Overwrite object
+        if hasattr(messages, 'value'):
+            messages = messages.value
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg in messages:
+            if hasattr(msg, 'content') and msg.content:
+                print(msg.content, end="", flush=True)
 print()
 EOF
 ----
