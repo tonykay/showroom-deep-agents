@@ -9,7 +9,7 @@ This module walks you through the YAML subagent pattern—a core technique for b
 
 == Exercise 1: The content-builder-agent Pattern
 
-Let's examine the canonical example from the deepagents repository. Here's what a `subagents.yaml` file looks like:
+. Examine the canonical example from the deepagents repository. Here's what a `subagents.yaml` file looks like:
 
 [source,yaml]
 ----
@@ -46,23 +46,23 @@ Let's break down each field:
 **`system_prompt`**: The subagent's instructions. Uses YAML's `|` syntax for multi-line strings. This prompt defines the subagent's persona, available tools, and expected workflow.
 
 **`tools`**: A list of tool names the subagent can use. These are strings that reference tool objects in your Python code—you'll map them during loading.
-
++
 This structure is clean, readable, and completely separate from your application code. You can version it, review it, and iterate on it without touching Python.
 
 == Exercise 2: Build a `load_subagents()` Helper
 
 The core of the YAML subagent pattern is a loader function that reads the YAML file and converts it to the subagent dictionary format that `create_deep_agent()` expects.
 
-Create a new directory for this exercise:
-
+. Create a new directory for this exercise:
++
 [source,role="execute"]
 ----
 mkdir -p yaml_demo
 cd yaml_demo
 ----
 
-First, define a simulated `web_search` tool:
-
+. Define a simulated `web_search` tool:
++
 [source,role="execute"]
 ----
 cat > tools.py << 'EOF'
@@ -75,8 +75,8 @@ def web_search(query: str, max_results: int = 5) -> str:
 EOF
 ----
 
-Now create the loader function:
-
+. Create the loader function:
++
 [source,role="execute"]
 ----
 cat > loader.py << 'EOF'
@@ -122,8 +122,8 @@ def load_subagents(config_path: Path) -> list:
 EOF
 ----
 
-Create a `subagents.yaml` file:
-
+. Create a `subagents.yaml` file:
++
 [source,role="execute"]
 ----
 cat > subagents.yaml << 'EOF'
@@ -147,8 +147,8 @@ researcher:
 EOF
 ----
 
-Now use it:
-
+. Create a demo script that uses the loader:
++
 [source,role="execute"]
 ----
 cat > demo.py << 'EOF'
@@ -172,23 +172,36 @@ print(result["messages"][-1].content)
 EOF
 ----
 
-Run it:
-
+. Run the demo:
++
 [source,role="execute"]
 ----
 python demo.py
 ----
++
+.Sample output
+----
+I'll help you research the key benefits of YAML for configuration management.
 
-You'll see the main agent delegate to the researcher, which uses the `web_search` tool and returns synthesized findings.
+[Task delegation to researcher subagent...]
 
+Based on the research findings, here are the key benefits of YAML for configuration management:
+
+1. Human-readable format: YAML uses indentation and minimal syntax, making it easy to read and write
+2. Language-agnostic: Works across multiple programming languages and platforms
+3. Supports complex data structures: Handles nested objects, arrays, and references naturally
+4. Reduces configuration errors: Clear syntax and validation help catch issues early
+5. Version control friendly: Plain text format works well with git and diff tools
+----
++
 The key insight: your Python code is generic. All the agent behavior is defined in `subagents.yaml`. To change the researcher's model, prompt, or tools, you just edit YAML—no Python changes needed.
 
 == Exercise 3: Multi-Subagent YAML
 
 Let's extend the pattern with a full content creation pipeline: researcher, writer, and reviewer.
 
-Update `subagents.yaml`:
-
+. Update `subagents.yaml` to include three subagents:
++
 [source,role="execute"]
 ----
 cat > subagents.yaml << 'EOF'
@@ -245,8 +258,8 @@ reviewer:
 EOF
 ----
 
-Create a content creation demo:
-
+. Create a content creation demo:
++
 [source,role="execute"]
 ----
 cat > content_pipeline.py << 'EOF'
@@ -271,20 +284,36 @@ print(result["messages"][-1].content)
 EOF
 ----
 
-Run it:
-
+. Run the content pipeline:
++
 [source,role="execute"]
 ----
 python content_pipeline.py
 ----
++
+.Sample output
+----
+[Delegating to researcher subagent...]
+[Researching microservices architecture...]
+[Delegating to writer subagent...]
+[Writing content based on research...]
+[Delegating to reviewer subagent...]
+[Reviewing content for quality...]
 
+Microservices architecture is a software design pattern that structures an application as a collection
+of loosely coupled, independently deployable services...
+...
+This approach enables teams to work autonomously, scale components individually, and maintain system
+resilience even when individual services fail.
+----
++
 Observe the orchestration:
-
++
 1. Main agent delegates research to `researcher` (Haiku)
 2. Takes research results, delegates writing to `writer` (Sonnet)
 3. Takes draft content, delegates review to `reviewer` (Sonnet)
 4. Integrates feedback and presents final result
-
++
 Each subagent has fresh context and clear responsibilities. The main agent handles orchestration. All behavior is defined in YAML.
 
 == Exercise 4: Iterating via Config
@@ -293,8 +322,8 @@ Here's where the pattern truly shines: config-driven iteration without code chan
 
 **Change 1: Upgrade the researcher's model**
 
-Edit `subagents.yaml` to change the researcher's model from Haiku to Sonnet:
-
+. Edit `subagents.yaml` to change the researcher's model from Haiku to Sonnet:
++
 [source,role="execute"]
 ----
 cat > subagents.yaml << 'EOF'
@@ -351,19 +380,28 @@ reviewer:
 EOF
 ----
 
-Re-run without changing Python:
-
+. Re-run without changing Python:
++
 [source,role="execute"]
 ----
 python content_pipeline.py
 ----
++
+.Sample output
+----
+[Delegating to researcher subagent with Sonnet model...]
+[Conducting more detailed research...]
 
+Microservices architecture represents a fundamental shift in how we build and deploy software systems...
+[More comprehensive and nuanced content due to Sonnet's enhanced capabilities...]
+----
++
 The researcher now uses Sonnet, producing deeper, more nuanced research.
 
 **Change 2: Refine the writer's tone**
 
-Edit the writer's description to be more specific:
-
+. Edit the writer's description to be more specific:
++
 [source,role="execute"]
 ----
 cat > subagents.yaml << 'EOF'
@@ -419,19 +457,30 @@ reviewer:
 EOF
 ----
 
-Re-run:
-
+. Re-run to see the updated writer behavior:
++
 [source,role="execute"]
 ----
 python content_pipeline.py
 ----
++
+.Sample output
+----
+Microservices architecture allows you to build applications as independent services. Here's a practical example:
 
+Consider an e-commerce platform. Instead of one monolithic app, you'd create separate services:
+- Product catalog service (handles inventory, search)
+- Order processing service (manages cart, checkout)
+- User authentication service (login, permissions)
+...
+----
++
 The writer now produces more practical, example-driven content.
 
 **Change 3: Stricter reviews**
 
-Add a constraint to the reviewer's prompt:
-
+. Add a constraint to the reviewer's prompt:
++
 [source,role="execute"]
 ----
 cat > subagents.yaml << 'EOF'
@@ -493,15 +542,27 @@ reviewer:
 EOF
 ----
 
-Re-run:
-
+. Re-run to see stricter review feedback:
++
 [source,role="execute"]
 ----
 python content_pipeline.py
 ----
++
+.Sample output
+----
+[Delegating to reviewer with stricter standards...]
 
+REVIEW FEEDBACK:
+- Paragraph 1: "loosely coupled" needs a concrete example
+- Missing specific metrics for "scale components individually"
+- The statement about "autonomous teams" is too abstract - provide an example
+- Need code snippet or configuration example for clarity
+...
+----
++
 The reviewer now provides stricter, more detailed feedback.
-
++
 All three changes were YAML-only. No Python edits. This is the power of the loader pattern: your application code is generic and stable, while your agent behavior is data-driven and easy to iterate.
 
 == Exercise 5: Structuring Larger Projects
@@ -539,6 +600,8 @@ fact_checker:
 
 For 8+ subagents, split into separate files:
 
+. Create a subagents directory with individual YAML files:
++
 [source,role="execute"]
 ----
 mkdir -p subagents
@@ -562,8 +625,8 @@ system_prompt: |
 EOF
 ----
 
-Update the loader to read from a directory:
-
+. Update the loader to read from a directory:
++
 [source,role="execute"]
 ----
 cat > loader_v2.py << 'EOF'
@@ -603,8 +666,10 @@ EOF
 
 **Config validation with Pydantic V2**
 
-As your YAML configs grow, validation becomes critical. Use Pydantic V2 to catch misconfigurations early:
+As your YAML configs grow, validation becomes critical. Use Pydantic V2 to catch misconfigurations early.
 
+. Create a validation module:
++
 [source,role="execute"]
 ----
 cat > validation.py << 'EOF'
@@ -645,8 +710,8 @@ except ValidationError as e:
 EOF
 ----
 
-Create an invalid config to test validation:
-
+. Create an invalid config to test validation:
++
 [source,role="execute"]
 ----
 cat > invalid_subagents.yaml << 'EOF'
@@ -657,8 +722,8 @@ researcher:
 EOF
 ----
 
-Test validation:
-
+. Create a test script for validation:
++
 [source,role="execute"]
 ----
 cat > test_validation.py << 'EOF'
@@ -677,17 +742,22 @@ except ValidationError as e:
 EOF
 ----
 
-Run it:
-
+. Run the validation test:
++
 [source,role="execute"]
 ----
 python test_validation.py
 ----
++
+.Sample output
+----
+✗ Config validation failed:
+  - ('researcher', 'description'): String should have at least 10 characters
+  - ('researcher', 'system_prompt'): String should have at least 20 characters
+----
 
-You'll see validation errors for the too-short description and system_prompt.
-
-Now test with the valid config:
-
+. Test with the valid config:
++
 [source,role="execute"]
 ----
 cat > test_validation2.py << 'EOF'
@@ -707,13 +777,19 @@ except ValidationError as e:
 EOF
 ----
 
-Run it:
-
+. Run the valid config test:
++
 [source,role="execute"]
 ----
 python test_validation2.py
 ----
-
++
+.Sample output
+----
+✓ Config is valid
+  Loaded 3 subagents
+----
++
 Validation passes. This catches misconfigurations at load time, before your agent runs.
 
 **Best practices for larger projects:**
