@@ -5,8 +5,10 @@ Now that you have a working agent from Module 1, it's time to learn how to contr
 
 == Exercise 1: Custom System Prompts
 
-Let's create an agent with a specific persona — a senior Python code reviewer:
+Let's create an agent with a specific persona — a senior Python code reviewer.
 
+. Create the review agent script:
++
 [source,role="execute"]
 ----
 cat > review_agent.py << 'EOF'
@@ -35,17 +37,43 @@ print(result["messages"][-1].content)
 EOF
 ----
 
+. Run the review agent:
++
 [source,role="execute"]
 ----
 python review_agent.py
+----
++
+.Sample output
+----
+This code has several serious issues:
+
+1. Type safety and proper type hints: Missing type hints for the function parameter and return value.
+
+2. Error handling: No try/except blocks to handle potential file read errors or JSON parsing failures.
+
+3. Security vulnerabilities: CRITICAL - Using eval() on file contents is extremely dangerous. It will execute arbitrary Python code, creating a severe security vulnerability. Use json.load() instead.
+
+4. Performance considerations: The f-string file path construction is vulnerable to path traversal attacks.
+
+Recommended fix:
+def get_user(user_id: str) -> dict:
+    import json
+    from pathlib import Path
+
+    file_path = Path("users") / f"{user_id}.json"
+    with open(file_path) as f:
+        return json.load(f)
 ----
 
 The `system_prompt` parameter is prepended to `BASE_AGENT_PROMPT` — the agent still has all its built-in capabilities (tool use, planning, etc.), but now also has your custom instructions. This lets you add domain expertise without losing the core agent behavior.
 
 == Exercise 2: The Base Prompt
 
-Let's explore what `BASE_AGENT_PROMPT` actually contains:
+Let's explore what `BASE_AGENT_PROMPT` actually contains.
 
+. Create a script to inspect the base prompt:
++
 [source,role="execute"]
 ----
 cat > inspect_prompt.py << 'EOF'
@@ -56,9 +84,39 @@ print(f"\n... ({len(BASE_AGENT_PROMPT)} total characters)")
 EOF
 ----
 
+. Run the inspection script:
++
 [source,role="execute"]
 ----
 python inspect_prompt.py
+----
++
+.Sample output
+----
+You are a helpful AI assistant with access to tools. When given a task:
+
+1. Analyze the request carefully
+2. Determine which tools you need to use
+3. Execute the tools in the correct order
+4. Synthesize the results into a helpful response
+
+TOOL USAGE GUIDELINES:
+
+When using tools, always:
+- Check that required parameters are present
+- Validate inputs before making tool calls
+- Handle errors gracefully
+- Provide clear feedback about what you're doing
+
+BEHAVIORAL GUIDELINES:
+
+For complex tasks:
+- Break down the problem into manageable steps
+- Use the write_todos tool to plan your approach
+- Execute systematically and track progress
+...
+
+... (8547 total characters)
 ----
 
 You'll see this is no simple "you are a helpful assistant" prompt. It's a comprehensive instruction manual covering:
@@ -72,8 +130,10 @@ This is the "detailed system prompt" pillar in action — giving the LLM clear, 
 
 == Exercise 3: Planning with Todos
 
-For complex multi-step tasks, Deep Agents can plan out the work before executing. Let's see this in action:
+For complex multi-step tasks, Deep Agents can plan out the work before executing. Let's see this in action.
 
+. Create the planning agent script:
++
 [source,role="execute"]
 ----
 cat > planning_agent.py << 'EOF'
@@ -96,17 +156,34 @@ for msg in result["messages"]:
 EOF
 ----
 
+. Run the planning agent:
++
 [source,role="execute"]
 ----
 python planning_agent.py
+----
++
+.Sample output
+----
+Planning step detected!
+Todos: {'todos': [
+  '[ ] Create project directory structure with src/, tests/, and config folders',
+  '[ ] Create database models (User, Session) in src/models/',
+  '[ ] Create authentication handlers in src/auth/',
+  '[ ] Create REST API endpoints in src/api/',
+  '[ ] Create test files for models and API endpoints',
+  '[ ] Create requirements.txt and basic configuration'
+]}
 ----
 
 The `write_todos` tool is provided by `TodoListMiddleware` — a context engineering strategy. By giving the agent a way to write down a plan, it can break complex tasks into manageable steps and track progress.
 
 == Exercise 4: Guiding Planning Behavior
 
-You can use system prompts to influence how the agent plans:
+You can use system prompts to influence how the agent plans.
 
+. Create the guided planning script:
++
 [source,role="execute"]
 ----
 cat > guided_planning.py << 'EOF'
@@ -135,9 +212,23 @@ for msg in result["messages"]:
 EOF
 ----
 
+. Run the guided planning agent:
++
 [source,role="execute"]
 ----
 python guided_planning.py
+----
++
+.Sample output
+----
+Planning step detected!
+Todos: {'todos': [
+  '[ ] Step 1: Create base project structure (pyproject.toml, README.md, .gitignore)',
+  '[ ] Step 2: Create user and session models (src/models/user.py, src/models/session.py)',
+  '[ ] Step 3: Create authentication module (src/auth/handlers.py, src/auth/middleware.py)',
+  '[ ] Step 4: Create API endpoints (src/api/routes.py, src/api/dependencies.py)',
+  '[ ] Step 5: Create test files (tests/test_models.py, tests/test_auth.py, tests/test_api.py)'
+]}
 ----
 
 Compare the planning behavior with and without the custom instructions. The system prompt gives you fine-grained control over the agent's approach.
