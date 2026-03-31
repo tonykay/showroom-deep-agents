@@ -7,8 +7,8 @@ The built-in tools cover filesystem operations, but real agents need domain-spec
 
 The `@tool` decorator from `langchain_core` makes it easy to turn any Python function into a tool the agent can use. Let's start with a basic example.
 
-Create a simple word-counting tool:
-
+. Create a simple word-counting tool:
++
 [source,role="execute"]
 ----
 cat > simple_tool.py << 'EOF'
@@ -34,11 +34,16 @@ print(result["messages"][-1].content)
 EOF
 ----
 
-Run it to see the agent use your custom tool:
-
+. Run it to see the agent use your custom tool:
++
 [source,role="execute"]
 ----
-python simple_tool.py
+uv run python simple_tool.py
+----
++
+.Sample output
+----
+There are 9 words in that sentence.
 ----
 
 Notice how custom tools are passed via the `tools=[...]` parameter and are added alongside (not replacing) the built-in tools. The `@tool` decorator automatically creates a tool schema from your function's signature and docstring.
@@ -47,8 +52,8 @@ Notice how custom tools are passed via the `tools=[...]` parameter and are added
 
 For more complex tools, you can use Pydantic V2 models to define structured input schemas with rich field descriptions.
 
-Create a code analysis tool with multiple parameters:
-
+. Create a code analysis tool with multiple parameters:
++
 [source,role="execute"]
 ----
 cat > structured_tool.py << 'EOF'
@@ -86,11 +91,21 @@ print(result["messages"][-1].content)
 EOF
 ----
 
-Run it to see structured input in action:
-
+. Run it to see structured input in action:
++
 [source,role="execute"]
 ----
-python structured_tool.py
+uv run python structured_tool.py
+----
++
+.Sample output
+----
+The code has a couple of quality issues:
+
+1. No type hints found - the function parameters and return value lack type annotations
+2. No docstrings found - there's no documentation explaining what the function does
+
+Consider adding type hints like `def add(a: int, b: int) -> int:` and a docstring describing the function's purpose.
 ----
 
 Pydantic V2 models give the LLM a rich schema with field descriptions, making it easier for the model to understand how to call your tool correctly with all the right parameters.
@@ -131,8 +146,8 @@ Don't create a single "do_everything" tool. Instead, create focused tools that e
 
 Let's add several tools and observe how the agent routes between them based on user questions.
 
-Create an agent with multiple specialized tools:
-
+. Create an agent with multiple specialized tools:
++
 [source,role="execute"]
 ----
 cat > multiple_tools.py << 'EOF'
@@ -177,11 +192,23 @@ for question in questions:
 EOF
 ----
 
-Run it and watch the agent select the appropriate tool for each question:
-
+. Run it and watch the agent select the appropriate tool for each question:
++
 [source,role="execute"]
 ----
-python multiple_tools.py
+uv run python multiple_tools.py
+----
++
+.Sample output
+----
+Question: What time is it?
+Answer: The current date and time is 2026-03-30T14:32:15.891234.
+
+Question: How many words: 'Hello world from Python'
+Answer: There are 4 words in that text.
+
+Question: What is 15 * 23 + 7?
+Answer: The result is 352.
 ----
 
 The agent automatically chooses the right tool based on the question and the tool descriptions you provided.
@@ -190,8 +217,8 @@ The agent automatically chooses the right tool based on the question and the too
 
 For tools with side effects or high costs, you can add human-in-the-loop approval using interrupts.
 
-Create an agent that pauses before executing certain tools:
-
+. Create an agent that pauses before executing certain tools:
++
 [source,role="execute"]
 ----
 cat > interrupt_tool.py << 'EOF'
@@ -243,11 +270,18 @@ else:
 EOF
 ----
 
-Run it to see the interrupt mechanism:
-
+. Run it to see the interrupt mechanism:
++
 [source,role="execute"]
 ----
-python interrupt_tool.py
+uv run python interrupt_tool.py
+----
++
+.Sample output
+----
+Agent paused before calling: ('tools',)
+Approve execution? (y/n)
+Result: The result is 5000.
 ----
 
 The agent pauses before executing the specified tool and waits for approval. This is critical for tools with side effects like sending emails, making purchases, or deleting files.
