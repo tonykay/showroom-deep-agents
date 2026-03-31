@@ -7,130 +7,173 @@ The Deep Agents CLI provides an interactive Textual-based interface for working 
 
 == Exercise 1: TUI deep dive
 
-Launch the Deep Agents CLI to explore its Textual-based user interface:
-
+. Launch the Deep Agents CLI to explore its Textual-based user interface:
++
 [source,role="execute"]
 ----
 deepagents
 ----
-
++
 Take a moment to familiarize yourself with the interface:
-
++
 * **Input area** — at the bottom, where you type your requests
 * **Streaming output** — agent responses appear in real-time as they're generated
 * **Tool call visualization** — watch as the agent invokes tools, displaying parameters and results
 * **Conversation history** — scroll up to review previous exchanges
 * **Keyboard shortcuts** — use arrow keys for navigation, Enter to submit, Ctrl+C to exit
 
-Now give the CLI a multi-step task that requires planning and tool usage.
+. Give the CLI a multi-step task that requires planning and tool usage.
 Try something like: "Create a Python script that analyzes CSV files, then write tests for it, and finally document it in a README."
-
++
 Observe how the TUI renders:
-
++
 * The agent's planning process
 * Individual tool calls with their arguments
 * Subagent delegation if the task requires specialized skills
 * Streaming responses that update in real-time
 
-Exit the CLI with Ctrl+C when you're done exploring.
+. Exit the CLI with Ctrl+C when you're done exploring.
 
 == Exercise 2: Configuration
 
 The Deep Agents CLI stores configuration and user-level customizations in `~/.deepagents/`.
-Let's explore this directory:
 
+. Explore the configuration directory:
++
 [source,role="execute"]
 ----
 ls -la ~/.deepagents/ 2>/dev/null || echo "No config directory yet"
 ----
-
++
+.Sample output
+----
+total 0
+drwxr-xr-x  4 user  staff  128 Mar 30 10:15 .
+drwxr-xr-x  25 user  staff  800 Mar 30 10:15 ..
+drwxr-xr-x  3 user  staff   96 Mar 30 10:15 agent
+-rw-r--r--  1 user  staff  245 Mar 30 10:15 AGENTS.md
+----
++
 The directory structure includes:
-
++
 * `~/.deepagents/agent/skills/` — globally available skills that any CLI session can use
 * `~/.deepagents/AGENTS.md` — user-level memory that persists across all projects
 * Configuration files for default models, API keys, and preferences
-
++
 You can set a default model by creating a configuration file, or specify it at runtime with the `--model` flag.
 Any skills placed in the global skills directory will be automatically available in all CLI sessions, regardless of your current working directory.
 
 == Exercise 3: Custom skills in CLI
 
 Let's install a skill globally so it's available in any CLI session.
-We'll use the code-review skill as an example:
+We'll use the code-review skill as an example.
 
+. Install the code-review skill globally and list available skills:
++
 [source,role="execute"]
 ----
 mkdir -p ~/.deepagents/agent/skills/
 cp -r skills/code-review ~/.deepagents/agent/skills/
 deepagents skills list
 ----
-
++
+.Sample output
+----
+Available skills:
+  - code-review (from ~/.deepagents/agent/skills/)
+  - testing (from ~/.deepagents/agent/skills/)
+  - documentation (from ~/.deepagents/agent/skills/)
+----
++
 The code-review skill should now appear in the list of available skills.
 
-Launch the CLI and ask it to review a file from the workshop:
-
+. Launch the CLI and ask it to review a file from the workshop:
++
 [source,role="execute"]
 ----
 deepagents
 ----
-
++
 Try asking: "Review the agent.py file and provide feedback on code quality and potential improvements."
-
++
 The agent will automatically use the globally installed code-review skill if it's appropriate for the task.
 
 == Exercise 4: Headless mode
 
-The CLI also supports a non-interactive headless mode, useful for scripting and automation:
+The CLI also supports a non-interactive headless mode, useful for scripting and automation.
 
+. Run a task in headless mode:
++
 [source,role="execute"]
 ----
 deepagents --headless "List all Python files in the current directory and count the total lines of code" 2>/dev/null
 ----
++
+.Sample output
+----
+Found 12 Python files in the current directory:
+- agent.py (245 lines)
+- skills/code_review.py (156 lines)
+- skills/testing.py (203 lines)
+...
+- examples/chat.py (89 lines)
 
+Total lines of code: 1,847
+----
++
 In headless mode:
-
++
 * No TUI is displayed
 * The agent runs the task and exits
 * Output is written to stdout, suitable for piping
 * Perfect for CI/CD pipelines, shell scripts, and automation
 
-You can pipe the output to a file for later analysis:
-
+. Pipe the output to a file for later analysis:
++
 [source,role="execute"]
 ----
 deepagents --headless "Analyze the project structure and list all modules" > analysis.txt
 ----
-
++
 This makes the CLI a powerful tool for automated code analysis, documentation generation, and batch processing tasks.
 
 == Exercise 5: CLI + project context
 
 The CLI is aware of your current working directory and automatically discovers project-specific context.
-Let's see this in action:
 
+. Navigate to the project directory and check for context files:
++
 [source,role="execute"]
 ----
 cd deep-agents-workshop
 ls AGENTS.md skills/
 ----
++
+.Sample output
+----
+AGENTS.md
 
+skills/:
+code-review/  testing/  documentation/
+----
++
 When you launch the CLI from a project directory, it automatically:
-
++
 * Discovers `./AGENTS.md` and loads it as project-level memory
 * Scans `./skills/` for project-specific skills
 * Combines these with global skills and memory from `~/.deepagents/`
-
++
 This mirrors the programmatic approach of `memory=["./AGENTS.md"]` and `skills=["./skills/"]`, but happens automatically based on your current directory.
 
-Launch the CLI from the project directory:
-
+. Launch the CLI from the project directory:
++
 [source,role="execute"]
 ----
 deepagents
 ----
-
++
 Ask the agent a question that requires project knowledge: "What skills are available in this project and what do they do?"
-
++
 The agent will reference both the local `skills/` directory and any global skills you've installed.
 
 == Exercise 6: Practical workflow
@@ -138,31 +181,31 @@ The agent will reference both the local `skills/` directory and any global skill
 Now let's use the CLI as a development companion in a realistic workflow.
 This exercise ties together skills, memory, and built-in capabilities.
 
-Start the CLI in your project directory:
-
+. Start the CLI in your project directory:
++
 [source,role="execute"]
 ----
 cd deep-agents-workshop
 deepagents
 ----
 
-Work through this scenario step by step:
-
-1. **Scaffold a new feature**: "Create a new module called `feature_analytics.py` that provides basic analytics for user interactions"
-
-2. **Write tests**: "Now write comprehensive tests for the analytics module you just created"
-
-3. **Review the code**: "Review the analytics module code you wrote and identify any potential improvements"
-
-4. **Update memory**: "Update AGENTS.md with what you learned about analytics implementation in this project"
-
+. Work through this scenario step by step in the CLI:
++
+* **Scaffold a new feature**: "Create a new module called `feature_analytics.py` that provides basic analytics for user interactions"
++
+* **Write tests**: "Now write comprehensive tests for the analytics module you just created"
++
+* **Review the code**: "Review the analytics module code you wrote and identify any potential improvements"
++
+* **Update memory**: "Update AGENTS.md with what you learned about analytics implementation in this project"
++
 Watch how the agent:
-
++
 * Uses built-in tools to read and write files
 * Invokes specialized skills when appropriate
 * Maintains context across multiple requests in the conversation
 * Persists knowledge by updating the project's memory file
-
++
 This workflow demonstrates the CLI as more than a quick demo tool — it's a full-featured agent environment that can assist with real development tasks.
 
 == Module summary
