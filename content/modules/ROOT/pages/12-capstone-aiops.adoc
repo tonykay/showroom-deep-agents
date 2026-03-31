@@ -34,6 +34,8 @@ This architecture demonstrates:
 - Configuration-driven design (YAML subagents)
 - Persistent memory (operational context)
 
+TIP: A complete reference implementation for this capstone is available in `solutions/capstone/` in the workshop repository. Use it to check your work or get unstuck — but you'll learn more by building it yourself.
+
 == Exercise 1: Design the Team
 
 Start by creating the directory structure and defining the three specialized subagents in YAML.
