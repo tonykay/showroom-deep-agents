@@ -1,0 +1,162 @@
+= Your First Deep Agent
+:source-highlighter: rouge
+
+You're about to build your first deep agent in under five minutes.
+No complex setup, no boilerplate — just a few lines of code that give you a fully-equipped AI agent with filesystem access, memory, planning, and more.
+
+== Learning Objectives
+
+By the end of this module, you will:
+
+* Create and run a working deep agent with a single function call
+* Understand the structure of agent responses and how to work with message streams
+* Explore the default toolset that comes built into every deep agent
+* Run your first interactive agent session using the CLI
+
+== Exercise 1: Hello Deep Agent
+
+Let's create the simplest possible deep agent.
+You'll see just how little code it takes to get started.
+
+Create a new Python file with this code:
+
+[source,role="execute"]
+----
+cat > hello_agent.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+
+result = agent.invoke({"messages": [("user", "What tools do you have available?")]})
+
+for message in result["messages"]:
+    print(f"{message.type}: {message.content[:200]}")
+EOF
+----
+
+Now run it:
+
+[source,role="execute"]
+----
+uv run python hello_agent.py
+----
+
+What just happened?
+The `create_deep_agent()` function gave you a fully-configured LangGraph agent.
+When you called `invoke()`, the agent processed your message and returned a dictionary with a `messages` key containing the conversation history.
+
+Look at the output.
+You'll see the agent listing its available tools: `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `execute`, `write_todos`, and `task`.
+These tools embody the four pillars we discussed earlier — filesystem access, memory management, task decomposition, and command execution.
+
+== Exercise 2: Streaming Responses
+
+Most of the time, you'll want to see the agent's response as it's being generated, not all at once.
+Let's switch to streaming mode.
+
+Create a new file:
+
+[source,role="execute"]
+----
+cat > streaming_agent.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+
+for event in agent.stream({"messages": [("user", "Write a haiku about Python programming")]}):
+    for key, value in event.items():
+        if key == "messages":
+            for msg in value:
+                if hasattr(msg, 'content') and msg.content:
+                    print(msg.content, end="", flush=True)
+print()
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+uv run python streaming_agent.py
+----
+
+Instead of `invoke()`, you used `stream()`.
+This returns an event stream in LangGraph's event format — a series of dictionaries representing state updates as the agent executes.
+Each event can contain different keys (`messages`, `task_updates`, `tool_calls`, etc.), and you filter for the ones you care about.
+
+In this case, you're watching for `messages` events and printing content as it arrives.
+You'll see the haiku appear token by token, just like in a chat interface.
+
+== Exercise 3: Exploring Defaults
+
+Let's take a closer look at those built-in tools.
+Create another script that asks the agent to describe its capabilities:
+
+[source,role="execute"]
+----
+cat > explore_tools.py << 'EOF'
+from deepagents import create_deep_agent
+
+agent = create_deep_agent(model="anthropic:claude-sonnet-4-6")
+
+result = agent.invoke({"messages": [("user", "List all the tools you have access to and briefly describe each one.")]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+uv run python explore_tools.py
+----
+
+The agent will walk you through its toolbox:
+
+* **read_file**, **write_file**, **edit_file** — filesystem operations for reading, creating, and modifying files
+* **ls**, **glob**, **grep** — file discovery and search capabilities
+* **execute** — runs shell commands (with safety guardrails)
+* **write_todos** — persists structured memory for task tracking
+* **task** — decomposes complex requests into manageable subtasks
+
+These tools aren't just examples — they're production-ready implementations of the four pillars.
+Every deep agent starts with this foundation, so it can handle real work right out of the box.
+
+== Exercise 4: CLI First Look
+
+You've been running agents programmatically, but Deep Agents also comes with a powerful CLI for interactive sessions.
+
+Start the CLI:
+
+[source,role="execute"]
+----
+deepagents
+----
+
+You'll see a prompt.
+Type a message like "What tools do you have available?" and press Enter.
+
+Watch the terminal as the agent streams its response.
+If it calls any tools, you'll see those calls displayed in the TUI (text user interface).
+The CLI handles all the streaming, formatting, and event display for you.
+
+When you're done exploring, press Ctrl+C to exit.
+
+We'll dive deep into the CLI in Module 9, but you'll see CLI examples throughout this workshop.
+It's often the fastest way to test ideas and debug agent behavior.
+
+== Module Summary
+
+In less than five minutes, you've:
+
+* Created a working deep agent with a single function call
+* Seen how agent responses are structured as message lists in a dictionary
+* Explored the default toolset that implements the four pillars
+* Run your first interactive CLI session
+
+The key takeaway: `create_deep_agent()` gives you a fully-equipped agent out of the box.
+It returns a LangGraph `CompiledStateGraph`, which means you get all of LangGraph's features — streaming, checkpointing, human-in-the-loop, and more — without writing any graph code yourself.
+The four pillars are already operational, ready to handle real tasks.
+
+In the next module, you'll learn how the four-pillar architecture works under the hood and why it makes deep agents different from traditional LLM applications.
