@@ -87,9 +87,10 @@ EOF
 
 [source,python]
 ----
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -115,9 +116,10 @@ Observe progressive disclosure in action.
 [source,role="execute"]
 ----
 cat > test_skill_invocation.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -167,9 +169,10 @@ Equip a subagent with its own skills. Skills on subagents are isolated — the m
 [source,role="execute"]
 ----
 cat > test_subagent_skills.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 reviewer_subagent = {
     "name": "code-reviewer",
@@ -247,9 +250,10 @@ EOF
 [source,role="execute"]
 ----
 cat > test_skill_layering.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -308,9 +312,10 @@ EOF
 [source,role="execute"]
 ----
 cat > test_skill_delegation.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,

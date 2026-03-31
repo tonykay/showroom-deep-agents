@@ -12,10 +12,11 @@ The `@tool` decorator from `langchain_core` makes it easy to turn any Python fun
 [source,role="execute"]
 ----
 cat > simple_tool.py << 'EOF'
+import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 @tool
 def word_count(text: str) -> int:
@@ -59,11 +60,12 @@ For more complex tools, you can use Pydantic V2 models to define structured inpu
 [source,role="execute"]
 ----
 cat > structured_tool.py << 'EOF'
+import os
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 class CodeAnalysisInput(BaseModel):
     code: str = Field(description="The Python code to analyze")
@@ -155,10 +157,11 @@ Let's add several tools and observe how the agent routes between them based on u
 [source,role="execute"]
 ----
 cat > multiple_tools.py << 'EOF'
+import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 @tool
 def word_count(text: str) -> int:
@@ -228,10 +231,11 @@ For tools with side effects or high costs, you can add human-in-the-loop approva
 [source,role="execute"]
 ----
 cat > interrupt_tool.py << 'EOF'
+import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 @tool
 def word_count(text: str) -> int:

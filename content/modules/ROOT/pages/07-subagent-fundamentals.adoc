@@ -35,9 +35,10 @@ Let's define and use a research subagent.
 [source,role="execute"]
 ----
 cat > research_demo.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 researcher = {
     "name": "researcher",
@@ -99,9 +100,10 @@ When you give subagents to a main agent, it receives a `task` tool under the hoo
 [source,role="execute"]
 ----
 cat > inspect_delegation.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 researcher = {
     "name": "researcher",
@@ -165,9 +167,10 @@ The `description` field is not just documentation—it's the primary routing mec
 [source,role="execute"]
 ----
 cat > routing_demo.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 fact_finder = {
     "name": "fact_finder",
@@ -232,9 +235,10 @@ The simple factual question routes to `fact_finder`. The complex decision routes
 [source,role="execute"]
 ----
 cat > routing_demo2.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 fact_finder = {
     "name": "fact_finder",
@@ -291,10 +295,11 @@ Different tasks need different models. Research might work fine with a fast, che
 [source,role="execute"]
 ----
 cat > model_routing.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
-FAST_MODEL = "anthropic:claude-haiku-4-5-20251001"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
 
 researcher = {
     "name": "researcher",
@@ -359,9 +364,10 @@ This is useful when you want context isolation without specialization—just a f
 [source,role="execute"]
 ----
 cat > default_subagent.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 # No subagents defined
 agent = create_deep_agent(

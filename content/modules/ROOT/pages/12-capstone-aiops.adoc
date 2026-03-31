@@ -700,13 +700,14 @@ Now create the main agent with interrupt controls. The `interrupt_on` parameter 
 [source,role="execute"]
 ----
 cat > aiops/agent.py << 'EOF'
+import os
 from pathlib import Path
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 from loader import load_subagents
 from tools import execute_remediation, fetch_logs, query_metrics
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 # Create the ops_manager orchestrator
 agent = create_deep_agent(

@@ -12,9 +12,10 @@ Let's create an agent with a specific persona — a senior Python code reviewer.
 [source,role="execute"]
 ----
 cat > review_agent.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -139,9 +140,10 @@ For complex multi-step tasks, Deep Agents can plan out the work before executing
 [source,role="execute"]
 ----
 cat > planning_agent.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(model=MODEL)
 
@@ -191,9 +193,10 @@ You can use system prompts to influence how the agent plans.
 [source,role="execute"]
 ----
 cat > guided_planning.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,

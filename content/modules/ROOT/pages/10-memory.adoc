@@ -57,9 +57,10 @@ Use memory for context that should influence every interaction: coding standards
 [source,role="execute"]
 ----
 cat > test_memory.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -101,9 +102,10 @@ Agents can modify their own AGENTS.md to learn and persist knowledge across conv
 [source,role="execute"]
 ----
 cat > update_memory.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -194,9 +196,10 @@ EOF
 [source,role="execute"]
 ----
 cat > layered_memory.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -256,10 +259,11 @@ Memory sits near the bottom of the stack because it shapes the system prompt tha
 [source,role="execute"]
 ----
 cat > full_stack.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
-FAST_MODEL = "anthropic:claude-haiku-4-5-20251001"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
 
 subagents = [
     {
@@ -337,9 +341,10 @@ export OPENAI_API_KEY=your-key-here
 [source,role="execute"]
 ----
 cat > multi_provider.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 subagents = [
     {

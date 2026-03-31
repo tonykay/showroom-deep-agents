@@ -19,10 +19,11 @@ mkdir -p workspace
 [source,role="execute"]
 ----
 cat > file_tools.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -84,10 +85,11 @@ The `execute` tool lets the agent run shell commands. This is powerful but requi
 [source,role="execute"]
 ----
 cat > execute_tool.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
@@ -141,10 +143,11 @@ Let's explore how `FilesystemBackend` constrains file operations.
 [source,role="execute"]
 ----
 cat > scoped_backend.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 backend = FilesystemBackend(root_dir="./workspace/myproject")
 
@@ -197,10 +200,11 @@ Sometimes you want the agent to work with files without touching the real filesy
 [source,role="execute"]
 ----
 cat > state_backend.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,

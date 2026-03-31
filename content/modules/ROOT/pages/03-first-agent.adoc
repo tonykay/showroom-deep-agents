@@ -23,9 +23,10 @@ You'll see just how little code it takes to get started.
 [source,role="execute"]
 ----
 cat > hello_agent.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(model=MODEL)
 
@@ -151,9 +152,10 @@ Let's switch to streaming mode.
 [source,role="execute"]
 ----
 cat > streaming_agent.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(model=MODEL)
 
@@ -197,9 +199,10 @@ Let's take a closer look at those built-in tools.
 [source,role="execute"]
 ----
 cat > explore_tools.py << 'EOF'
+import os
 from deepagents import create_deep_agent
 
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(model=MODEL)
 
