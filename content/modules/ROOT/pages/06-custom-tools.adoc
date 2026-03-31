@@ -43,7 +43,7 @@ EOF
 uv run python simple_tool.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 There are 9 words in that sentence.
 ----
@@ -102,7 +102,7 @@ EOF
 uv run python structured_tool.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 The code has a couple of quality issues:
 
@@ -205,7 +205,7 @@ EOF
 uv run python multiple_tools.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Question: What time is it?
 Answer: The current date and time is 2026-03-30T14:32:15.891234.
@@ -285,7 +285,7 @@ EOF
 uv run python interrupt_tool.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Agent paused before calling: ('tools',)
 Approve execution? (y/n)

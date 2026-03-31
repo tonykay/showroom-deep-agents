@@ -70,7 +70,7 @@ EOF
 python research_demo.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Here are the key differences between REST and GraphQL APIs:
 
@@ -141,7 +141,7 @@ EOF
 python inspect_delegation.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 === Delegation Analysis ===
 
@@ -216,7 +216,7 @@ EOF
 python routing_demo.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 === Task 1: What is REST? ===
 Routed to: fact_finder
@@ -272,7 +272,7 @@ EOF
 python routing_demo2.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 === With changed descriptions ===
 Routed to: fact_finder
@@ -334,7 +334,7 @@ EOF
 python model_routing.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Task 1 complete (routed to researcher/Haiku)
 
@@ -391,7 +391,7 @@ EOF
 python default_subagent.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 === Result ===
 The factorial of 10 is 3,628,800. This represents the product of all positive

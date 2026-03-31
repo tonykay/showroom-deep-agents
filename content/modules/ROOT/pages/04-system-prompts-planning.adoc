@@ -46,7 +46,7 @@ EOF
 python review_agent.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 This code has several serious issues:
 
@@ -93,7 +93,7 @@ EOF
 python inspect_prompt.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 You are a helpful AI assistant with access to tools. When given a task:
 
@@ -167,7 +167,7 @@ EOF
 python planning_agent.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Planning step detected!
 Todos: {'todos': [
@@ -225,7 +225,7 @@ EOF
 python guided_planning.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Planning step detected!
 Todos: {'todos': [

@@ -46,7 +46,7 @@ EOF
 uv run python file_tools.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I've successfully created the project structure. Here's what I did:
 
@@ -110,7 +110,7 @@ EOF
 uv run python execute_tool.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I've checked the installed versions and listed the current directory:
 
@@ -169,7 +169,7 @@ EOF
 uv run python scoped_backend.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I successfully listed the files in the current directory:
 - README.md
@@ -223,7 +223,7 @@ EOF
 uv run python state_backend.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I've successfully created and verified the file:
 
