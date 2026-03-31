@@ -207,15 +207,23 @@ Let's take a closer look at those built-in tools.
 ----
 cat > explore_tools.py << 'EOF'
 import os
+import re
 from deepagents import create_deep_agent
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(model=MODEL)
 
-result = agent.invoke({"messages": [("user", "List all the tools you have access to and briefly describe each one.")]})
+result = agent.invoke({"messages": [("user",
+    "List your tools. For each tool give the name and a one-line description. "
+    "Use plain text, one tool per line, format: tool_name - description"
+)]})
 
-print(result["messages"][-1].content)
+# Clean up any markdown formatting for terminal display
+content = result["messages"][-1].content
+content = re.sub(r'\*\*([^*]+)\*\*', r'\1', content)  # Remove bold
+content = re.sub(r'`([^`]+)`', r'\1', content)         # Remove code ticks
+print(content)
 EOF
 ----
 
@@ -228,18 +236,14 @@ uv run python explore_tools.py
 +
 .Sample output (your results may vary)
 ----
-I have access to the following tools:
-
-1. **read_file** - Read the contents of a file from the filesystem
-2. **write_file** - Write content to a new file or overwrite an existing file
-3. **edit_file** - Edit an existing file by replacing specific content
-4. **ls** - List files and directories in a given path
-5. **glob** - Search for files matching a pattern
-...
-8. **write_todos** - Persist structured memory for task tracking
-9. **task** - Decompose complex requests into manageable subtasks
-
-These tools enable me to work with files, execute commands, and manage tasks effectively.
+write_todos - Create or update a structured task list for tracking progress
+ls - List files and directories at a given path
+read_file - Read the contents of a file with optional pagination
+write_file - Create a new file and write content to it
+edit_file - Replace specific text in an existing file
+glob - Find files matching a glob pattern
+grep - Search for text across files
+task - Launch a subagent to handle a complex task independently
 ----
 +
 The agent will walk you through its toolbox:
