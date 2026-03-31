@@ -49,16 +49,23 @@ ai: I have access to the following tools:
 1. **read_file** - Read the contents of a file
 2. **write_file** - Write content to a file
 3. **edit_file** - Edit an existing file
-4. **ls** - List
+4. **ls** - List files and directories
+5. **glob** - Find files matching a pattern
+6. **grep** - Search file contents
+7. **execute** - Run shell commands
+8. **write_todos** - Create and manage a task list
+9. **task** - Delegate work to a sub-agent
 ----
 +
-What just happened?
-The `create_deep_agent()` function gave you a fully-configured LangGraph agent.
-When you called `invoke()`, the agent processed your message and returned a dictionary with a `messages` key containing the conversation history.
+What just happened? The `create_deep_agent()` function gave you a fully-configured LangGraph agent. When you called `invoke()`, the agent processed your message and returned a dictionary with a `messages` key containing the conversation history.
 +
-Look at the output.
-You'll see the agent listing its available tools: `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `execute`, `write_todos`, and `task`.
-These tools embody the four pillars we discussed earlier — filesystem access, memory management, task decomposition, and command execution.
+Notice the nine tools listed in the output -- these are the four pillars in action:
++
+* **Filesystem tools** (`read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`) -- Pillar 4
+* **Shell execution** (`execute`) -- also Pillar 4
+* **Planning** (`write_todos`) -- Pillar 2
+* **Sub-agents** (`task`) -- Pillar 3
+* **Pillar 1** (the detailed system prompt) is what taught the agent how to describe and use all of these
 
 == Exercise 2: Streaming Responses
 
