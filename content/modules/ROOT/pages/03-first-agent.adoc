@@ -77,10 +77,24 @@ You'll notice every script in this workshop defines a `MODEL` constant at the to
 
 [source,python]
 ----
-MODEL = "anthropic:claude-sonnet-4-6"
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 ----
 
-Deep Agents uses a `"provider:model"` format that supports any LiteLLM-compatible provider. If you want to use a different model, just change this one line. Here are some examples:
+This reads from the `DEEPAGENTS_MODEL` environment variable, falling back to Claude Sonnet if unset. To switch every script in the workshop to a different model, just set the environment variable once:
+
+[source,role="execute"]
+----
+export DEEPAGENTS_MODEL="ollama:llama3.1:8b"
+----
+
+No code changes needed -- every script picks up the new model automatically. To switch back to the default, unset it:
+
+[source,role="execute"]
+----
+unset DEEPAGENTS_MODEL
+----
+
+Deep Agents uses a `"provider:model"` format that supports any LiteLLM-compatible provider. Here are some examples:
 
 [cols="2,3",options="header"]
 |===
@@ -101,13 +115,6 @@ Deep Agents uses a `"provider:model"` format that supports any LiteLLM-compatibl
 |Ollama (local, larger)
 |`"ollama:qwen2.5:32b"`
 |===
-
-For example, to run the entire workshop against a local Ollama model:
-
-[source,python]
-----
-MODEL = "ollama:llama3.1:8b"
-----
 
 TIP: If you're using Ollama, make sure it's running locally (`ollama serve`) and that you've pulled the model first (`ollama pull llama3.1:8b`). No API key is needed for local models. Be aware that smaller local models may struggle with complex tool-use tasks in later modules -- the exercises were designed and tested with Claude Sonnet.
 
