@@ -1,0 +1,35 @@
+= Deep Agents: From First Agent to Production Multi-Agent Systems
+
+A hands-on workshop building real AI agent systems with LangChain's Deep Agents framework.
+
+== What You'll Learn
+
+By the end of this workshop, you'll be able to:
+
+* **Master the four pillars of Deep Agents**: LLMs, tools, planning, and memory — and understand how they work together to create autonomous agent systems
+* **Build multi-agent systems with subagents**: compose complex workflows by delegating specialized tasks to purpose-built subagents
+* **Create and deploy reusable skills**: package agent capabilities into shareable, configurable components that accelerate development
+* **Ship production-ready agent systems**: use the Deep Agents CLI to scaffold, test, and deploy agent applications
+* **Apply your knowledge in a real-world capstone**: build an AIOps agent system that monitors, diagnoses, and responds to infrastructure issues autonomously
+
+== How This Workshop Works
+
+This workshop takes a top-down approach: you'll start by running a working agent, then progressively peel back layers to understand how each component works. Each module is self-contained with hands-on exercises, and the final capstone brings everything together in a production-grade project.
+
+**Time commitment**: Approximately 8 hours total, including exercises and the capstone project. You can work through modules at your own pace.
+
+**Learning approach**: Each module follows a "working code first" philosophy. You'll interact with functioning agents before diving into implementation details, making concepts concrete before exploring theory.
+
+== Prerequisites
+
+To get the most out of this workshop, you should have:
+
+* **Python experience**: comfortable reading and writing Python code, understanding classes, decorators, and async/await patterns
+* **Familiarity with LLM APIs**: experience using OpenAI or Anthropic SDKs to call language models (even basic prompt/response patterns)
+* **No LangChain or LangGraph experience required**: we'll introduce these frameworks from the ground up, focusing specifically on Deep Agents patterns
+
+You'll also need API keys for OpenAI or Anthropic to run the exercises.
+
+== Let's Get Started
+
+Ready to build your first AI agent system? Head over to the xref:01-overview.adoc[Workshop Overview] to get oriented and set up your development environment.
