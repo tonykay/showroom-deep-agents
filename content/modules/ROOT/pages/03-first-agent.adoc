@@ -44,7 +44,7 @@ EOF
 uv run python hello_agent.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Here are my available tools:
 
@@ -59,6 +59,8 @@ Here are my available tools:
 | grep | Search for a text pattern across files |
 | task | Spawn a subagent to handle a complex task independently |
 ----
++
+NOTE: LLM responses are non-deterministic -- the agent may format or word its output differently each time you run it. The same tools will be listed, but the exact phrasing, ordering, and layout may vary. This is normal and expected throughout the workshop.
 +
 What just happened? The `create_deep_agent()` function gave you a fully-configured LangGraph agent. When you called `invoke()`, the agent processed your message and returned a dictionary with a `messages` key containing the conversation history.
 +
@@ -102,7 +104,7 @@ EOF
 uv run python streaming_agent.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Code flows through loops,
 Indentation guides the way,
@@ -144,7 +146,7 @@ EOF
 uv run python explore_tools.py
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 I have access to the following tools:
 
@@ -182,7 +184,7 @@ You've been running agents programmatically, but Deep Agents also comes with a p
 deepagents
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
 Deep Agents CLI v0.2.1
 Using model: anthropic:claude-sonnet-4-6
