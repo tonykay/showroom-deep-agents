@@ -1,0 +1,99 @@
+= Conclusion & Next Steps
+:source-highlighter: rouge
+
+You've reached the end of the Deep Agents learning path.
+You've gone from creating your first agent in five lines of code to building production-ready multi-agent systems.
+Let's recap what you've accomplished and explore where to go from here.
+
+== What You Built
+
+Throughout this workshop, you built progressively sophisticated agent systems.
+Here's what each module delivered:
+
+1. **Your First Deep Agent** — Created and invoked an agent, explored the default toolset and message streams
+2. **System Prompts & Planning** — Customized agent behavior with system prompts, enabled structured planning with TodoListMiddleware
+3. **Filesystem Tools & Backends** — Navigated files with filesystem tools, configured FilesystemBackend and StateBackend for persistence
+4. **Custom Tools** — Extended agent capabilities with @tool decorator, Pydantic V2 schemas, and human-in-the-loop patterns
+5. **Subagent Fundamentals** — Defined specialized subagents, delegated work with the task tool, and routed different models
+6. **YAML Subagents & Loader Pattern** — Externalized configuration to YAML, built reusable load_subagents() helpers
+7. **Skills & Progressive Disclosure** — Created SKILL.md files for layered capabilities, combined skills with subagents
+8. **Memory & AGENTS.md** — Implemented persistent context with self-updating memory and multi-provider support
+9. **The Deep Agents CLI** — Used the TUI for interactive sessions, headless mode for automation, and project context discovery
+10. **Capstone: AIOps Team** — Built a production multi-agent system with ops_manager orchestrating specialized SRE subagents
+
+== Key Patterns to Take Away
+
+The Deep Agents framework is built on four foundational pillars that you've now mastered:
+
+**The Four Pillars**
+
+* **System Prompt** — Shape agent behavior, define roles, and set boundaries
+* **Planning** — Give agents structured thinking with todo lists and multi-step reasoning
+* **Subagents** — Compose specialized agents into teams with clear responsibilities
+* **Filesystem** — Enable agents to persist state, share context, and maintain memory
+
+**Configuration-Driven Development**
+
+* **YAML-driven subagent configuration** — Maintain agent teams through config files, not code changes
+* **Skills + subagents composition** — Scale capability management by layering skills on top of subagent hierarchies
+* **Memory (AGENTS.md)** — Persistent context that agents can read and update across sessions
+* **Config-driven iteration** — Change agent behavior by editing YAML and markdown, no code deployments needed
+
+This architecture gives you the best of both worlds: the power of code when you need it, and the flexibility of configuration when you want to iterate quickly.
+
+== Next Steps
+
+You're ready to take Deep Agents into production.
+Here are the key areas to explore next:
+
+**Visual Debugging & Development**
+
+* **LangGraph Studio** — Debug agent execution with interactive graph visualization, step through tool calls, and inspect state
+* Replay failed agent runs and test changes without re-running expensive LLM calls
+* Profile agent performance and identify bottlenecks in subagent delegation
+
+**Deployment Patterns**
+
+* **LangGraph Cloud** — Deploy agents as managed APIs with built-in scaling, monitoring, and state management
+* **Self-hosted deployment** — Run agents in your own infrastructure using Docker containers or Kubernetes
+* **AsyncSubAgent** — Deploy subagents as remote services and call them over HTTP
+* **CompositeBackend** — Combine multiple backends (Redis for state, S3 for files) for production storage patterns
+
+**Advanced Patterns**
+
+* Multi-turn conversations with state persistence
+* Agent-to-agent communication across different systems
+* Custom middleware for logging, metrics, and observability
+* Integration with existing tools and APIs
+
+== Resources
+
+**Documentation & Code**
+
+* Deep Agents repository: https://github.com/langchain-ai/deepagents
+* LangGraph documentation: https://langchain-ai.github.io/langgraph/
+* Agent Skills specification: https://agentskills.io
+* AGENTS.md specification: https://agents.md
+
+**Blog Posts & Guides**
+
+* "Deep Agents: Building Production AI Agents" — https://blog.langchain.com/deep-agents/
+* "Doubling Down on Agents" — https://blog.langchain.com/doubling-down/
+* "Using Agent Skills" — https://blog.langchain.com/using-skills/
+* "Building Multi-Agent Systems" — https://blog.langchain.com/building-multi-agent/
+
+**Community**
+
+* Join the LangChain Discord for discussions, questions, and sharing agent patterns
+* Contribute to the Deep Agents repository — share your custom tools and subagent configurations
+* Follow @LangChainAI on Twitter for updates and announcements
+
+== Final Thoughts
+
+You now have everything you need to build sophisticated AI agent systems.
+The patterns you've learned — from basic agent creation to multi-agent orchestration — scale from prototypes to production.
+
+Start small, iterate with config, and compose agents as your needs grow.
+The Deep Agents framework will grow with you.
+
+Happy building!
