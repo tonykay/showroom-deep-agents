@@ -1,0 +1,770 @@
+= YAML Subagents & the Loader Pattern
+:source-highlighter: rouge
+
+In Module 5, you defined subagents as Python dictionaries. That works well for small examples, but as your agent team grows, mixing configuration with code becomes hard to maintain. Changes require editing Python files, redeploying, and carefully tracking which subagent does what.
+
+The content-builder-agent example demonstrates a better pattern: defining subagents in YAML files and loading them dynamically. This separates configuration from code, making it easy to iterate on agent behavior, swap models, and refine prompts without touching your application logic.
+
+This module walks you through the YAML subagent pattern—a core technique for building maintainable, scalable agent systems.
+
+== Exercise 1: The content-builder-agent Pattern
+
+Let's examine the canonical example from the deepagents repository. Here's what a `subagents.yaml` file looks like:
+
+[source,yaml]
+----
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-haiku-4-5-20251001
+  system_prompt: |
+    You are a research assistant. You have access to web_search
+    and write_file tools.
+
+    ## Your Tools
+    - web_search(query, max_results=5, topic="general") - Search the web
+    - write_file(file_path, content) - Save your findings
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+    4. Save your research to a file for the main agent
+  tools:
+    - web_search
+----
+
+Let's break down each field:
+
+**`researcher` (top-level key)**: The subagent's name. This is used for routing via the `task` tool's `subagent_type` parameter.
+
+**`description`**: The routing signal. Notice the directive language: "ALWAYS use this first...". This isn't just documentation—it actively guides the main agent's delegation decisions. Strong, imperative descriptions lead to better routing.
+
+**`model`**: The model identifier. Here, the researcher uses Haiku for fast, cost-effective web searches. You could use Sonnet for more complex reasoning or Opus for maximum capability.
+
+**`system_prompt`**: The subagent's instructions. Uses YAML's `|` syntax for multi-line strings. This prompt defines the subagent's persona, available tools, and expected workflow.
+
+**`tools`**: A list of tool names the subagent can use. These are strings that reference tool objects in your Python code—you'll map them during loading.
+
+This structure is clean, readable, and completely separate from your application code. You can version it, review it, and iterate on it without touching Python.
+
+== Exercise 2: Build a `load_subagents()` Helper
+
+The core of the YAML subagent pattern is a loader function that reads the YAML file and converts it to the subagent dictionary format that `create_deep_agent()` expects.
+
+Create a new directory for this exercise:
+
+[source,role="execute"]
+----
+mkdir -p yaml_demo
+cd yaml_demo
+----
+
+First, define a simulated `web_search` tool:
+
+[source,role="execute"]
+----
+cat > tools.py << 'EOF'
+from langchain_core.tools import tool
+
+@tool
+def web_search(query: str, max_results: int = 5) -> str:
+    """Search the web for information on a topic."""
+    return f"[Simulated search results for: {query}]\n- Result 1: {query} overview\n- Result 2: {query} best practices\n- Result 3: {query} common patterns"
+EOF
+----
+
+Now create the loader function:
+
+[source,role="execute"]
+----
+cat > loader.py << 'EOF'
+import yaml
+from pathlib import Path
+from tools import web_search
+
+def load_subagents(config_path: Path) -> list:
+    """Load subagent definitions from a YAML file.
+
+    Maps tool name strings in YAML to actual tool objects.
+    This is a custom utility—deepagents doesn't natively
+    load subagents from files.
+    """
+    # Registry of available tools
+    available_tools = {
+        "web_search": web_search,
+    }
+
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    subagents = []
+    for name, spec in config.items():
+        subagent = {
+            "name": name,
+            "description": spec["description"],
+            "system_prompt": spec["system_prompt"],
+        }
+
+        # Optional: model override
+        if "model" in spec:
+            subagent["model"] = spec["model"]
+
+        # Optional: tools
+        if "tools" in spec:
+            # Map tool name strings to actual tool objects
+            subagent["tools"] = [available_tools[t] for t in spec["tools"]]
+
+        subagents.append(subagent)
+
+    return subagents
+EOF
+----
+
+Create a `subagents.yaml` file:
+
+[source,role="execute"]
+----
+cat > subagents.yaml << 'EOF'
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-haiku-4-5-20251001
+  system_prompt: |
+    You are a research assistant. You have access to web_search tool.
+
+    ## Your Tools
+    - web_search(query, max_results=5) - Search the web
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+  tools:
+    - web_search
+EOF
+----
+
+Now use it:
+
+[source,role="execute"]
+----
+cat > demo.py << 'EOF'
+from pathlib import Path
+from deepagents import create_deep_agent
+from loader import load_subagents
+
+# Load subagents from YAML
+subagents = load_subagents(Path("subagents.yaml"))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the key benefits of YAML for configuration management."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+python demo.py
+----
+
+You'll see the main agent delegate to the researcher, which uses the `web_search` tool and returns synthesized findings.
+
+The key insight: your Python code is generic. All the agent behavior is defined in `subagents.yaml`. To change the researcher's model, prompt, or tools, you just edit YAML—no Python changes needed.
+
+== Exercise 3: Multi-Subagent YAML
+
+Let's extend the pattern with a full content creation pipeline: researcher, writer, and reviewer.
+
+Update `subagents.yaml`:
+
+[source,role="execute"]
+----
+cat > subagents.yaml << 'EOF'
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-haiku-4-5-20251001
+  system_prompt: |
+    You are a research assistant. You have access to web_search tool.
+
+    ## Your Tools
+    - web_search(query, max_results=5) - Search the web
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+  tools:
+    - web_search
+
+writer:
+  description: >
+    Use this to write clear, engaging content based on research.
+    Transforms facts and findings into readable prose.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a technical writer. Your goal is to create clear,
+    engaging content that explains complex topics accessibly.
+
+    ## Your Process
+    1. Review the research provided
+    2. Organize information logically
+    3. Write in a conversational, friendly tone
+    4. Use examples and analogies when helpful
+    5. Keep paragraphs short and scannable
+
+reviewer:
+  description: >
+    Use this to review content for quality, accuracy, and completeness.
+    Provides constructive feedback and suggests improvements.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a content reviewer. Your goal is to ensure quality,
+    accuracy, and readability.
+
+    ## Your Review Criteria
+    - Accuracy: Are facts correct and well-supported?
+    - Clarity: Is the writing clear and easy to follow?
+    - Completeness: Does it cover the topic thoroughly?
+    - Tone: Is it appropriate for the audience?
+
+    Provide specific, actionable feedback.
+EOF
+----
+
+Create a content creation demo:
+
+[source,role="execute"]
+----
+cat > content_pipeline.py << 'EOF'
+from pathlib import Path
+from deepagents import create_deep_agent
+from loader import load_subagents
+
+# Load all three subagents
+subagents = load_subagents(Path("subagents.yaml"))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a 3-paragraph explanation of microservices architecture. "
+    "First research the topic, then write the content, then review it for quality."
+)]})
+
+print(result["messages"][-1].content)
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+python content_pipeline.py
+----
+
+Observe the orchestration:
+
+1. Main agent delegates research to `researcher` (Haiku)
+2. Takes research results, delegates writing to `writer` (Sonnet)
+3. Takes draft content, delegates review to `reviewer` (Sonnet)
+4. Integrates feedback and presents final result
+
+Each subagent has fresh context and clear responsibilities. The main agent handles orchestration. All behavior is defined in YAML.
+
+== Exercise 4: Iterating via Config
+
+Here's where the pattern truly shines: config-driven iteration without code changes.
+
+**Change 1: Upgrade the researcher's model**
+
+Edit `subagents.yaml` to change the researcher's model from Haiku to Sonnet:
+
+[source,role="execute"]
+----
+cat > subagents.yaml << 'EOF'
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a research assistant. You have access to web_search tool.
+
+    ## Your Tools
+    - web_search(query, max_results=5) - Search the web
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+  tools:
+    - web_search
+
+writer:
+  description: >
+    Use this to write clear, engaging content based on research.
+    Transforms facts and findings into readable prose.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a technical writer. Your goal is to create clear,
+    engaging content that explains complex topics accessibly.
+
+    ## Your Process
+    1. Review the research provided
+    2. Organize information logically
+    3. Write in a conversational, friendly tone
+    4. Use examples and analogies when helpful
+    5. Keep paragraphs short and scannable
+
+reviewer:
+  description: >
+    Use this to review content for quality, accuracy, and completeness.
+    Provides constructive feedback and suggests improvements.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a content reviewer. Your goal is to ensure quality,
+    accuracy, and readability.
+
+    ## Your Review Criteria
+    - Accuracy: Are facts correct and well-supported?
+    - Clarity: Is the writing clear and easy to follow?
+    - Completeness: Does it cover the topic thoroughly?
+    - Tone: Is it appropriate for the audience?
+
+    Provide specific, actionable feedback.
+EOF
+----
+
+Re-run without changing Python:
+
+[source,role="execute"]
+----
+python content_pipeline.py
+----
+
+The researcher now uses Sonnet, producing deeper, more nuanced research.
+
+**Change 2: Refine the writer's tone**
+
+Edit the writer's description to be more specific:
+
+[source,role="execute"]
+----
+cat > subagents.yaml << 'EOF'
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a research assistant. You have access to web_search tool.
+
+    ## Your Tools
+    - web_search(query, max_results=5) - Search the web
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+  tools:
+    - web_search
+
+writer:
+  description: >
+    Use this to write technical documentation in a practical, example-driven style.
+    Focus on actionable insights and concrete use cases.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a technical writer specializing in practical, example-driven content.
+
+    ## Your Process
+    1. Review the research provided
+    2. Lead with practical use cases
+    3. Use concrete examples and code snippets when relevant
+    4. Keep it actionable—readers should know what to do next
+    5. Avoid abstract explanations; prefer specifics
+
+reviewer:
+  description: >
+    Use this to review content for quality, accuracy, and completeness.
+    Provides constructive feedback and suggests improvements.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a content reviewer. Your goal is to ensure quality,
+    accuracy, and readability.
+
+    ## Your Review Criteria
+    - Accuracy: Are facts correct and well-supported?
+    - Clarity: Is the writing clear and easy to follow?
+    - Completeness: Does it cover the topic thoroughly?
+    - Tone: Is it appropriate for the audience?
+
+    Provide specific, actionable feedback.
+EOF
+----
+
+Re-run:
+
+[source,role="execute"]
+----
+python content_pipeline.py
+----
+
+The writer now produces more practical, example-driven content.
+
+**Change 3: Stricter reviews**
+
+Add a constraint to the reviewer's prompt:
+
+[source,role="execute"]
+----
+cat > subagents.yaml << 'EOF'
+researcher:
+  description: >
+    ALWAYS use this first to research any topic before writing content.
+    Searches the web for current information, statistics, and sources.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a research assistant. You have access to web_search tool.
+
+    ## Your Tools
+    - web_search(query, max_results=5) - Search the web
+
+    ## Your Process
+    1. Use web_search to find information on the topic
+    2. Make 2-3 targeted searches with specific queries
+    3. Synthesize findings into a clear summary
+  tools:
+    - web_search
+
+writer:
+  description: >
+    Use this to write technical documentation in a practical, example-driven style.
+    Focus on actionable insights and concrete use cases.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a technical writer specializing in practical, example-driven content.
+
+    ## Your Process
+    1. Review the research provided
+    2. Lead with practical use cases
+    3. Use concrete examples and code snippets when relevant
+    4. Keep it actionable—readers should know what to do next
+    5. Avoid abstract explanations; prefer specifics
+
+reviewer:
+  description: >
+    Use this to review content for quality, accuracy, and completeness.
+    Provides constructive feedback and suggests improvements.
+  model: anthropic:claude-sonnet-4-6
+  system_prompt: |
+    You are a strict content reviewer. Your goal is to ensure
+    the highest quality, accuracy, and readability.
+
+    ## Your Review Criteria
+    - Accuracy: Are facts correct and well-supported?
+    - Clarity: Is the writing clear and easy to follow?
+    - Completeness: Does it cover the topic thoroughly?
+    - Tone: Is it appropriate for the audience?
+    - Examples: Are there enough concrete examples?
+
+    ## Your Standards
+    - Flag any vague or abstract statements
+    - Require concrete examples for all claims
+    - Demand clarity in every sentence
+
+    Provide specific, actionable feedback with high standards.
+EOF
+----
+
+Re-run:
+
+[source,role="execute"]
+----
+python content_pipeline.py
+----
+
+The reviewer now provides stricter, more detailed feedback.
+
+All three changes were YAML-only. No Python edits. This is the power of the loader pattern: your application code is generic and stable, while your agent behavior is data-driven and easy to iterate.
+
+== Exercise 5: Structuring Larger Projects
+
+As your agent system grows, you'll need patterns for organizing subagent configurations.
+
+**Single YAML for small teams (up to 5-7 subagents)**
+
+The approach we've used so far works well for small teams. Keep all subagents in `subagents.yaml`:
+
+[source,yaml]
+----
+researcher:
+  description: ...
+  system_prompt: ...
+
+writer:
+  description: ...
+  system_prompt: ...
+
+reviewer:
+  description: ...
+  system_prompt: ...
+
+editor:
+  description: ...
+  system_prompt: ...
+
+fact_checker:
+  description: ...
+  system_prompt: ...
+----
+
+**Directory of YAML files for larger teams**
+
+For 8+ subagents, split into separate files:
+
+[source,role="execute"]
+----
+mkdir -p subagents
+cat > subagents/researcher.yaml << 'EOF'
+description: >
+  ALWAYS use this first to research any topic before writing content.
+  Searches the web for current information, statistics, and sources.
+model: anthropic:claude-haiku-4-5-20251001
+system_prompt: |
+  You are a research assistant...
+tools:
+  - web_search
+EOF
+
+cat > subagents/writer.yaml << 'EOF'
+description: >
+  Use this to write clear, engaging content based on research.
+model: anthropic:claude-sonnet-4-6
+system_prompt: |
+  You are a technical writer...
+EOF
+----
+
+Update the loader to read from a directory:
+
+[source,role="execute"]
+----
+cat > loader_v2.py << 'EOF'
+import yaml
+from pathlib import Path
+from tools import web_search
+
+def load_subagents_from_dir(dir_path: Path) -> list:
+    """Load subagent definitions from a directory of YAML files."""
+    available_tools = {
+        "web_search": web_search,
+    }
+
+    subagents = []
+    for yaml_file in sorted(dir_path.glob("*.yaml")):
+        with open(yaml_file) as f:
+            spec = yaml.safe_load(f)
+
+        name = yaml_file.stem  # filename without extension
+        subagent = {
+            "name": name,
+            "description": spec["description"],
+            "system_prompt": spec["system_prompt"],
+        }
+
+        if "model" in spec:
+            subagent["model"] = spec["model"]
+
+        if "tools" in spec:
+            subagent["tools"] = [available_tools[t] for t in spec["tools"]]
+
+        subagents.append(subagent)
+
+    return subagents
+EOF
+----
+
+**Config validation with Pydantic V2**
+
+As your YAML configs grow, validation becomes critical. Use Pydantic V2 to catch misconfigurations early:
+
+[source,role="execute"]
+----
+cat > validation.py << 'EOF'
+import yaml
+from pathlib import Path
+from pydantic import BaseModel, Field, RootModel, ValidationError
+
+class SubAgentConfig(BaseModel):
+    """Schema for a single subagent in YAML."""
+    description: str = Field(min_length=10)
+    system_prompt: str = Field(min_length=20)
+    model: str | None = None
+    tools: list[str] = Field(default_factory=list)
+
+class SubAgentsConfig(RootModel[dict[str, SubAgentConfig]]):
+    """Schema for the entire subagents.yaml file."""
+    pass
+
+def validate_subagent_config(config_path: Path) -> dict:
+    """Load and validate a subagents YAML file.
+
+    Raises ValidationError if config is invalid.
+    """
+    with open(config_path) as f:
+        raw_config = yaml.safe_load(f)
+
+    # Validate with Pydantic V2
+    validated = SubAgentsConfig(raw_config)
+    return validated.model_dump()
+
+# Test with valid config
+try:
+    config = validate_subagent_config(Path("subagents.yaml"))
+    print("✓ Config is valid")
+except ValidationError as e:
+    print("✗ Config validation failed:")
+    print(e)
+EOF
+----
+
+Create an invalid config to test validation:
+
+[source,role="execute"]
+----
+cat > invalid_subagents.yaml << 'EOF'
+researcher:
+  description: "Too short"  # Less than 10 chars
+  system_prompt: "Also short"  # Less than 20 chars
+  model: anthropic:claude-haiku-4-5-20251001
+EOF
+----
+
+Test validation:
+
+[source,role="execute"]
+----
+cat > test_validation.py << 'EOF'
+from pathlib import Path
+from validation import validate_subagent_config
+from pydantic import ValidationError
+
+# Test invalid config
+try:
+    config = validate_subagent_config(Path("invalid_subagents.yaml"))
+    print("✓ Config is valid")
+except ValidationError as e:
+    print("✗ Config validation failed:")
+    for error in e.errors():
+        print(f"  - {error['loc']}: {error['msg']}")
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+python test_validation.py
+----
+
+You'll see validation errors for the too-short description and system_prompt.
+
+Now test with the valid config:
+
+[source,role="execute"]
+----
+cat > test_validation2.py << 'EOF'
+from pathlib import Path
+from validation import validate_subagent_config
+from pydantic import ValidationError
+
+# Test valid config
+try:
+    config = validate_subagent_config(Path("subagents.yaml"))
+    print("✓ Config is valid")
+    print(f"  Loaded {len(config)} subagents")
+except ValidationError as e:
+    print("✗ Config validation failed:")
+    for error in e.errors():
+        print(f"  - {error['loc']}: {error['msg']}")
+EOF
+----
+
+Run it:
+
+[source,role="execute"]
+----
+python test_validation2.py
+----
+
+Validation passes. This catches misconfigurations at load time, before your agent runs.
+
+**Best practices for larger projects:**
+
+- Use Pydantic V2 validation on all YAML configs
+- Split subagents into separate files for teams > 7
+- Version control your YAML configs alongside code
+- Use YAML anchors and aliases for shared prompts:
+
+[source,yaml]
+----
+_shared_review_criteria: &review_criteria |
+  - Accuracy: Are facts correct?
+  - Clarity: Is it easy to follow?
+  - Completeness: Does it cover the topic?
+
+reviewer:
+  description: Review content for quality
+  system_prompt: |
+    You are a reviewer.
+
+    Criteria:
+    *review_criteria
+
+fact_checker:
+  description: Verify factual accuracy
+  system_prompt: |
+    You verify facts.
+
+    Criteria:
+    *review_criteria
+----
+
+== Module Summary
+
+You've accomplished:
+
+- Understanding the YAML subagent pattern from content-builder-agent
+- Building a `load_subagents()` helper to map YAML to Python
+- Creating multi-subagent YAML configurations
+- Iterating on agent behavior via config-only changes
+- Structuring larger projects with directory-based configs and validation
+
+Key takeaways:
+
+- Separate configuration from code for easier iteration
+- Use directive descriptions ("ALWAYS use this first...") as routing signals
+- Validate configs with Pydantic V2 to catch errors early
+- Single YAML works for small teams; directories scale better for large teams
+- YAML-only changes let you refine behavior without redeploying code
+
+The YAML subagent pattern is foundational for maintainable agent systems. As you build more complex agents, you'll find that externalizing configuration dramatically improves your iteration speed and code quality.
+
+Next, you'll explore advanced orchestration patterns and learn how to build agents that coordinate multiple subagents for complex workflows.
