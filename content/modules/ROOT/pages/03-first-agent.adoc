@@ -42,7 +42,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python hello_agent.py
+uv run hello_agent.py
 ----
 +
 .Sample output (your results may vary)
@@ -182,7 +182,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python streaming_agent.py
+uv run streaming_agent.py
 ----
 +
 .Sample output (your results may vary)
@@ -231,7 +231,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python explore_tools.py
+uv run explore_tools.py
 ----
 +
 .Sample output (your results may vary)
@@ -284,7 +284,7 @@ Watch the terminal as the agent streams its response.
 If it calls any tools, you'll see those calls displayed in the TUI (text user interface).
 The CLI handles all the streaming, formatting, and event display for you.
 
-. When you're done exploring, press Ctrl+C to exit.
+. When you're done exploring, type `/exit` to quit the CLI cleanly, or press kbd:[Ctrl+C] to force exit.
 +
 We'll dive deep into the CLI in Module 9, but you'll see CLI examples throughout this workshop.
 It's often the fastest way to test ideas and debug agent behavior.
