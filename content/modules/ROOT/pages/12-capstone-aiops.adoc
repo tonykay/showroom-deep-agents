@@ -772,7 +772,7 @@ Run the incident response scenario and observe the workflow.
 [source,role="execute"]
 ----
 cd aiops
-uv run python agent.py
+uv run agent.py
 ----
 +
 .Sample output (your results may vary)

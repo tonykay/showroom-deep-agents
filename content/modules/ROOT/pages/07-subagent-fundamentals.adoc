@@ -68,7 +68,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python research_demo.py
+uv run research_demo.py
 ----
 +
 .Sample output (your results may vary)
@@ -140,7 +140,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python inspect_delegation.py
+uv run inspect_delegation.py
 ----
 +
 .Sample output (your results may vary)
@@ -216,7 +216,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python routing_demo.py
+uv run routing_demo.py
 ----
 +
 .Sample output (your results may vary)
@@ -273,7 +273,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python routing_demo2.py
+uv run routing_demo2.py
 ----
 +
 .Sample output (your results may vary)
@@ -336,7 +336,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python model_routing.py
+uv run model_routing.py
 ----
 +
 .Sample output (your results may vary)
@@ -394,7 +394,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python default_subagent.py
+uv run default_subagent.py
 ----
 +
 .Sample output (your results may vary)

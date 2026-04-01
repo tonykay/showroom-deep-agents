@@ -79,7 +79,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python test_memory.py
+uv run test_memory.py
 ----
 +
 .Sample output (your results may vary)
@@ -125,7 +125,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python update_memory.py
+uv run update_memory.py
 ----
 +
 .Sample output (your results may vary)
@@ -218,7 +218,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python layered_memory.py
+uv run layered_memory.py
 ----
 +
 .Sample output (your results may vary)
@@ -295,7 +295,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python full_stack.py
+uv run full_stack.py
 ----
 +
 .Sample output (your results may vary)
@@ -379,7 +379,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python multi_provider.py
+uv run multi_provider.py
 ----
 +
 .Sample output (your results may vary)

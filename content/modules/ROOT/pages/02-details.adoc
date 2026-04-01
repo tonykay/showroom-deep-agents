@@ -130,7 +130,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python validate_setup.py
+uv run validate_setup.py
 ----
 +
 .Expected output

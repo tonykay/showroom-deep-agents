@@ -41,7 +41,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python simple_tool.py
+uv run simple_tool.py
 ----
 +
 .Sample output (your results may vary)
@@ -101,7 +101,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python structured_tool.py
+uv run structured_tool.py
 ----
 +
 .Sample output (your results may vary)
@@ -205,7 +205,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python multiple_tools.py
+uv run multiple_tools.py
 ----
 +
 .Sample output (your results may vary)
@@ -286,7 +286,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python interrupt_tool.py
+uv run interrupt_tool.py
 ----
 +
 .Sample output (your results may vary)

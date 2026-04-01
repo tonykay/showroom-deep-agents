@@ -20,7 +20,7 @@ Take a moment to familiarize yourself with the interface:
 * **Streaming output** — agent responses appear in real-time as they're generated
 * **Tool call visualization** — watch as the agent invokes tools, displaying parameters and results
 * **Conversation history** — scroll up to review previous exchanges
-* **Keyboard shortcuts** — use arrow keys for navigation, Enter to submit, Ctrl+C to exit
+* **Keyboard shortcuts** — use arrow keys for navigation, kbd:[Enter] to submit, type `/exit` to quit cleanly, or press kbd:[Ctrl+C] to force exit
 
 . Give the CLI a multi-step task that requires planning and tool usage.
 Try something like: "Create a Python script that analyzes CSV files, then write tests for it, and finally document it in a README."
@@ -32,7 +32,7 @@ Observe how the TUI renders:
 * Subagent delegation if the task requires specialized skills
 * Streaming responses that update in real-time
 
-. Exit the CLI with Ctrl+C when you're done exploring.
+. Exit the CLI by typing `/exit` when you're done exploring.
 
 == Exercise 2: Configuration
 

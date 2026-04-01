@@ -44,7 +44,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python file_tools.py
+uv run file_tools.py
 ----
 +
 .Sample output (your results may vary)
@@ -109,7 +109,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python execute_tool.py
+uv run execute_tool.py
 ----
 +
 .Sample output (your results may vary)
@@ -169,7 +169,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python scoped_backend.py
+uv run scoped_backend.py
 ----
 +
 .Sample output (your results may vary)
@@ -224,7 +224,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python state_backend.py
+uv run state_backend.py
 ----
 +
 .Sample output (your results may vary)

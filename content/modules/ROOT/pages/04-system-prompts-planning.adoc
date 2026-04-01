@@ -44,7 +44,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python review_agent.py
+uv run review_agent.py
 ----
 +
 .Sample output (your results may vary)
@@ -91,7 +91,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python inspect_prompt.py
+uv run inspect_prompt.py
 ----
 +
 .Sample output (your results may vary)
@@ -166,7 +166,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python planning_agent.py
+uv run planning_agent.py
 ----
 +
 .Sample output (your results may vary)
@@ -225,7 +225,7 @@ EOF
 +
 [source,role="execute"]
 ----
-uv run python guided_planning.py
+uv run guided_planning.py
 ----
 +
 .Sample output (your results may vary)
