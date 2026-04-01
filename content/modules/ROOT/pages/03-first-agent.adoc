@@ -145,7 +145,7 @@ Throughout this workshop, we use Anthropic's Claude Sonnet as the default becaus
 == Exercise 2: Streaming Responses
 
 Most of the time, you'll want to see the agent's response as it's being generated, not all at once.
-Let's switch to streaming mode.
+Let's switch to streaming mode, and write a haiku about Python.
 
 . Create a new file:
 +
