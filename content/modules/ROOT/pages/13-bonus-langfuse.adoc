@@ -1,0 +1,262 @@
+= Bonus: Tracing with LangFuse
+:source-highlighter: rouge
+
+When your agents get complex — subagents delegating to subagents, skills loading on demand, tools being called in sequence — understanding what's happening inside becomes critical. LangFuse gives you full observability into your Deep Agents by capturing every LLM call, tool invocation, and subagent delegation as a structured trace.
+
+Since Deep Agents are built on LangGraph, LangFuse's LangChain integration works out of the box. You just pass a callback handler and get instant visibility.
+
+== What you'll learn
+
+* Install and configure LangFuse for local or cloud tracing
+* Add observability to any Deep Agent with a single callback
+* Trace subagent delegation and tool calls
+* Use the LangFuse dashboard to debug agent behavior
+
+== Setting up LangFuse
+
+You have two options for running LangFuse:
+
+* **LangFuse Cloud** (easiest) — free tier at https://cloud.langfuse.com[cloud.langfuse.com]
+* **Self-hosted** — run locally with Docker
+
+=== Option A: LangFuse Cloud
+
+. Sign up at https://cloud.langfuse.com[cloud.langfuse.com] and create a project.
+
+. Copy your API keys from the project settings and set them:
++
+[source,role="execute"]
+----
+export LANGFUSE_PUBLIC_KEY="pk-lf-..."
+export LANGFUSE_SECRET_KEY="sk-lf-..."
+export LANGFUSE_HOST="https://cloud.langfuse.com"
+----
+
+=== Option B: Self-hosted (Docker)
+
+. Start LangFuse locally:
++
+[source,role="execute"]
+----
+docker compose up -d
+----
++
+See the https://langfuse.com/docs/deployment/self-host[LangFuse self-hosting docs] for the full `docker-compose.yml`.
+
+. Set your local keys:
++
+[source,role="execute"]
+----
+export LANGFUSE_PUBLIC_KEY="pk-lf-local"
+export LANGFUSE_SECRET_KEY="sk-lf-local"
+export LANGFUSE_HOST="http://localhost:3000"
+----
+
+=== Install the package
+
+. Add the LangFuse LangChain integration:
++
+[source,role="execute"]
+----
+uv add langfuse
+----
+
+== Exercise 1: Your first traced agent
+
+Adding tracing to a Deep Agent takes two lines — import the callback handler and pass it in the config.
+
+. Create a traced agent script:
++
+[source,role="execute"]
+----
+cat > traced_agent.py << 'EOF'
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Initialize LangFuse tracing
+langfuse_handler = CallbackHandler(
+    session_id="workshop-tracing",
+    tags=["deep-agents-workshop"],
+)
+
+agent = create_deep_agent(model=MODEL)
+
+# Pass the handler via config — LangGraph forwards it to all LLM calls
+result = agent.invoke(
+    {"messages": [("user", "What tools do you have? List them briefly.")]},
+    config={"callbacks": [langfuse_handler]},
+)
+
+print(result["messages"][-1].content)
+
+# Flush to ensure all traces are sent
+langfuse_handler.langfuse.flush()
+print("\nTrace sent to LangFuse!")
+EOF
+----
+
+. Run it:
++
+[source,role="execute"]
+----
+uv run traced_agent.py
+----
++
+.Sample output (your results may vary)
+----
+write_todos - Create or update a structured task list
+ls - List files in a directory
+...
+task - Launch a subagent to handle a complex task independently
+
+Trace sent to LangFuse!
+----
+
+. Open your LangFuse dashboard (cloud.langfuse.com or localhost:3000) and look at the **Traces** view. You should see a trace for your invocation showing:
++
+* The system prompt and user message
+* The LLM call with model, tokens, and latency
+* The response content
+
+== Exercise 2: Tracing subagent delegation
+
+The real power of tracing shows when subagents are involved. Each delegation appears as a nested span in the trace.
+
+. Create a multi-agent traced script:
++
+[source,role="execute"]
+----
+cat > traced_subagents.py << 'EOF'
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+langfuse_handler = CallbackHandler(
+    session_id="workshop-subagent-tracing",
+    tags=["deep-agents-workshop", "subagents"],
+)
+
+researcher = {
+    "name": "researcher",
+    "description": "Research topics and provide concise summaries.",
+    "system_prompt": "You are a research assistant. Be concise.",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[researcher],
+)
+
+result = agent.invoke(
+    {"messages": [("user",
+        "Use your researcher subagent to find out what the four pillars "
+        "of Deep Agents are. Keep it brief."
+    )]},
+    config={"callbacks": [langfuse_handler]},
+)
+
+print(result["messages"][-1].content)
+langfuse_handler.langfuse.flush()
+print("\nTrace sent to LangFuse!")
+EOF
+----
+
+. Run it:
++
+[source,role="execute"]
+----
+uv run traced_subagents.py
+----
+
+. Check the LangFuse dashboard again. This time the trace shows:
++
+* The main agent's LLM call deciding to delegate
+* The `task` tool call with the delegation description
+* A **nested span** for the researcher subagent's LLM call
+* The subagent's response flowing back to the main agent
+* The main agent's final response
+
+This hierarchical view is invaluable for debugging multi-agent workflows — you can see exactly where time is spent, which subagent was chosen, and what each agent saw and produced.
+
+== Exercise 3: Tracing in streaming mode
+
+Tracing works with streaming too — just pass the callback in the config.
+
+. Create a streaming traced script:
++
+[source,role="execute"]
+----
+cat > traced_streaming.py << 'EOF'
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+langfuse_handler = CallbackHandler(
+    session_id="workshop-streaming-tracing",
+    tags=["deep-agents-workshop", "streaming"],
+)
+
+agent = create_deep_agent(model=MODEL)
+
+for event in agent.stream(
+    {"messages": [("user", "Write a haiku about observability")]},
+    config={"callbacks": [langfuse_handler]},
+):
+    for value in event.values():
+        if not isinstance(value, dict):
+            continue
+        messages = value.get("messages")
+        if messages is None:
+            continue
+        if hasattr(messages, 'value'):
+            messages = messages.value
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg in messages:
+            if hasattr(msg, 'content') and msg.content:
+                print(msg.content, end="", flush=True)
+
+print()
+langfuse_handler.langfuse.flush()
+print("Trace sent to LangFuse!")
+EOF
+----
+
+. Run it:
++
+[source,role="execute"]
+----
+uv run traced_streaming.py
+----
+
+The trace in LangFuse captures the full interaction even though you received it as a stream.
+
+== What to look for in traces
+
+Once you have traces flowing, here's what to watch for:
+
+* **Latency breakdown** — which LLM calls take the longest? Is it the main agent or a subagent?
+* **Token usage** — how many tokens are consumed per invocation? Are system prompts too large?
+* **Subagent routing** — is the right subagent being selected? Check the `task` tool call arguments.
+* **Tool call patterns** — which tools are called and in what order? Are there unnecessary calls?
+* **Error traces** — failed LLM calls show up with error details, making debugging faster.
+
+TIP: Add meaningful `session_id` and `tags` to your callback handler to organize traces. For example, use the incident ID as session_id when tracing the AIOps capstone.
+
+== Module summary
+
+You've added full observability to your Deep Agents with LangFuse:
+
+* **One-line integration** — just pass a `CallbackHandler` in the config
+* **Subagent visibility** — nested spans show the full delegation hierarchy
+* **Streaming support** — traces capture the complete interaction regardless of delivery mode
+* **Production-ready** — the same approach works in deployed agents for monitoring and debugging
+
+This is essential for production agent systems. When your AIOps team handles a real incident at 3 AM, the trace tells you exactly what happened, which subagent was involved, and where things went wrong.

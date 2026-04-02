@@ -1,0 +1,99 @@
+= Bonus: Resources
+
+A curated collection of documentation, articles, blog posts, and videos to deepen your understanding of Deep Agents and the broader agent ecosystem.
+
+== Official Documentation
+
+=== Deep Agents
+
+* https://github.com/langchain-ai/deepagents[Deep Agents GitHub Repository] — source code, examples, and issues
+* https://github.com/langchain-ai/deepagents/tree/main/examples[Examples Directory] — reference implementations including the content-builder-agent
+* https://github.com/langchain-ai/deepagents/tree/main/libs/cli[CLI Source] — the deepagents-cli Textual TUI
+
+=== Specifications
+
+* https://agentskills.io/specification[Agent Skills Specification] — the SKILL.md format used for progressive skill disclosure
+* https://agents.md[AGENTS.md Specification] — the memory file convention for persistent agent context
+
+=== LangChain Ecosystem
+
+* https://python.langchain.com/docs/introduction/[LangChain Documentation] — the agent framework Deep Agents builds on
+* https://langchain-ai.github.io/langgraph/[LangGraph Documentation] — the runtime that powers `create_deep_agent()`
+* https://docs.smith.langchain.com/[LangSmith Documentation] — LangChain's observability platform (alternative to LangFuse)
+* https://langchain-ai.github.io/langgraph/cloud/[LangGraph Cloud] — deploying agents as hosted services
+
+== Blog Posts
+
+These posts from the LangChain team explain the design decisions and evolution of Deep Agents:
+
+* https://blog.langchain.com/deep-agents/[Deep Agents] — the introductory post explaining what Deep Agents are and the four pillars (system prompt, planning, sub-agents, filesystem)
+* https://blog.langchain.com/doubling-down-on-deepagents/[Doubling Down on Deep Agents] — v0.2 release introducing pluggable backends, CompositeBackend, conversation summarization, and large tool result eviction
+* https://blog.langchain.com/using-skills-with-deep-agents/[Using Skills with Deep Agents] — how progressive disclosure works, the SKILL.md format, and integration with the CLI
+* https://blog.langchain.com/building-multi-agent-applications-with-deep-agents/[Building Multi-Agent Applications with Deep Agents] — the subagent pattern for context isolation and specialization, combined with skills
+
+== Observability & Tracing
+
+* https://langfuse.com/docs[LangFuse Documentation] — open-source LLM observability platform
+* https://langfuse.com/docs/integrations/langchain[LangFuse LangChain Integration] — the CallbackHandler used in the bonus tracing module
+* https://langfuse.com/docs/deployment/self-host[LangFuse Self-Hosting Guide] — run LangFuse locally with Docker
+* https://docs.smith.langchain.com/[LangSmith] — LangChain's native tracing and evaluation platform
+
+== Model Providers
+
+Deep Agents supports any LiteLLM-compatible provider. Here are the ones covered in this workshop:
+
+* https://docs.anthropic.com/[Anthropic API Documentation] — Claude models (the workshop default)
+* https://platform.openai.com/docs/[OpenAI API Documentation] — GPT models
+* https://github.com/ollama/ollama[Ollama] — run open-source models locally
+* https://docs.litellm.ai/docs/providers[LiteLLM Provider List] — full list of supported providers and model formats
+
+== Related Projects & Tools
+
+* https://github.com/astral-sh/uv[uv] — the Python package manager used throughout this workshop
+* https://www.langchain.com/langgraph[LangGraph Studio] — visual debugger for LangGraph agents
+* https://github.com/rhpds/showroom_template_nookbag[Showroom Template] — the Antora-based lab format this workshop is built on
+
+== Community
+
+* https://github.com/langchain-ai/deepagents/issues[Deep Agents Issues] — report bugs and request features
+* https://github.com/langchain-ai/deepagents/discussions[Deep Agents Discussions] — community Q&A and ideas
+* https://discord.gg/langchain[LangChain Discord] — real-time community chat
+
+== Key Concepts Reference
+
+A quick lookup for the core concepts covered in this workshop:
+
+[cols="2,4",options="header"]
+|===
+|Concept |Where to learn more
+
+|`create_deep_agent()`
+|xref:03-first-agent.adoc[Module 1] and https://github.com/langchain-ai/deepagents/blob/main/libs/deepagents/deepagents/graph.py[source code]
+
+|Four Pillars
+|xref:01-overview.adoc[Workshop Overview] and https://blog.langchain.com/deep-agents/[introductory blog post]
+
+|SubAgent TypedDict
+|xref:07-subagent-fundamentals.adoc[Module 5] and xref:08-yaml-subagents.adoc[Module 6]
+
+|SKILL.md format
+|xref:09-skills.adoc[Module 7] and https://agentskills.io/specification[Agent Skills spec]
+
+|AGENTS.md
+|xref:10-memory.adoc[Module 8] and https://agents.md[AGENTS.md spec]
+
+|`load_subagents()` pattern
+|xref:08-yaml-subagents.adoc[Module 6] and https://github.com/langchain-ai/deepagents/tree/main/examples/content-builder-agent[content-builder-agent example]
+
+|Middleware stack
+|xref:10-memory.adoc[Module 8] and https://github.com/langchain-ai/deepagents/blob/main/libs/deepagents/deepagents/graph.py[source code]
+
+|Backends
+|xref:05-filesystem-backends.adoc[Module 3] and https://blog.langchain.com/doubling-down-on-deepagents/[v0.2 blog post]
+
+|Human-in-the-loop
+|xref:06-custom-tools.adoc[Module 4] and xref:12-capstone-aiops.adoc[Capstone]
+
+|LangFuse tracing
+|xref:13-bonus-langfuse.adoc[Bonus: Tracing] and https://langfuse.com/docs/integrations/langchain[LangFuse docs]
+|===
