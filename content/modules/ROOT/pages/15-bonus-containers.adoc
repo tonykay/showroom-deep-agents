@@ -1,0 +1,294 @@
+= Bonus: Deploying with Containers
+:source-highlighter: rouge
+
+You've built a working multi-agent system. Now let's package it for deployment. Containerizing your Deep Agent makes it portable, reproducible, and ready for production — whether you're running on a laptop, a VM, or a Kubernetes cluster.
+
+This module uses the AIOps capstone as the example, but the patterns apply to any Deep Agent project. We'll call out what's specific to the capstone vs. what you'd reuse unchanged.
+
+== What you'll learn
+
+* Create a production-ready Dockerfile for Deep Agent applications
+* Build and run containerized agents with Podman or Docker
+* Pass API keys and configuration safely via environment variables
+* Run a multi-container stack with Compose (agent + LangFuse)
+
+== Exercise 1: Create a Dockerfile
+
+The Dockerfile follows a multi-stage pattern that works for any Deep Agent project. We use `uv` inside the container for fast, reproducible dependency management.
+
+. Create the Dockerfile in the capstone directory:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/Dockerfile << 'EOF'
+# Stage 1: Install dependencies
+FROM python:3.13-slim AS builder
+
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+WORKDIR /app
+
+# Copy dependency files first (layer caching)
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies into the virtual environment
+RUN uv sync --frozen --no-dev
+
+# Stage 2: Runtime image
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Copy the virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy application code
+COPY aiops/ ./aiops/
+
+# Add venv to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Default model (override with -e DEEPAGENTS_MODEL=...)
+ENV DEEPAGENTS_MODEL="anthropic:claude-sonnet-4-6"
+
+# Run the agent
+CMD ["python", "aiops/agent.py"]
+EOF
+----
++
+Let's break down what's reusable vs. capstone-specific:
++
+* **Reusable for any Deep Agent**: The two-stage build pattern, `uv` installation, dependency caching, `PATH` setup, and `DEEPAGENTS_MODEL` env var
+* **Capstone-specific**: The `COPY aiops/` line and `CMD` entrypoint — swap these for your project's directory and script
+
+. Create a `pyproject.toml` for the capstone if one doesn't exist:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/pyproject.toml << 'EOF'
+[project]
+name = "aiops-agent"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "deepagents>=0.4.12",
+    "pyyaml>=6.0",
+]
+EOF
+----
+
+. Generate a lock file:
++
+[tabs]
+====
+Podman::
++
+[source,role="execute"]
+----
+cd solutions/capstone
+podman run --rm -v $PWD:/app:Z -w /app ghcr.io/astral-sh/uv:python3.13 uv lock
+----
+
+Docker::
++
+[source,role="execute"]
+----
+cd solutions/capstone
+docker run --rm -v $PWD:/app -w /app ghcr.io/astral-sh/uv:python3.13 uv lock
+----
+====
+
+== Exercise 2: Build and run locally
+
+. Build the container image:
++
+[tabs]
+====
+Podman::
++
+[source,role="execute"]
+----
+podman build -t aiops-agent:latest solutions/capstone/
+----
++
+.Sample output (your results may vary)
+----
+STEP 1/11: FROM python:3.13-slim AS builder
+...
+STEP 11/11: CMD ["python", "aiops/agent.py"]
+COMMIT aiops-agent:latest
+Successfully tagged localhost/aiops-agent:latest
+----
+
+Docker::
++
+[source,role="execute"]
+----
+docker build -t aiops-agent:latest solutions/capstone/
+----
++
+.Sample output (your results may vary)
+----
+[+] Building 12.3s (12/12) FINISHED
+...
+=> => naming to docker.io/library/aiops-agent:latest
+----
+====
+
+. Run the agent, passing your API key as an environment variable:
++
+[tabs]
+====
+Podman::
++
+[source,role="execute"]
+----
+podman run --rm \
+  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+  -e DEEPAGENTS_MODEL="${DEEPAGENTS_MODEL:-anthropic:claude-sonnet-4-6}" \
+  aiops-agent:latest
+----
+
+Docker::
++
+[source,role="execute"]
+----
+docker run --rm \
+  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+  -e DEEPAGENTS_MODEL="${DEEPAGENTS_MODEL:-anthropic:claude-sonnet-4-6}" \
+  aiops-agent:latest
+----
+====
++
+The agent runs the default incident scenario from `agent.py`. You should see the AIOps team respond to the simulated incident.
+
+IMPORTANT: Never bake API keys into your container image. Always pass them at runtime via `-e` flags, env files, or secrets management. The `DEEPAGENTS_MODEL` env var works inside containers too — swap models without rebuilding.
+
+== Exercise 3: Compose for multi-container
+
+In production you'll want observability alongside your agent. Let's add LangFuse as a companion service.
+
+. Create a Compose file:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/compose.yaml << 'EOF'
+services:
+  agent:
+    build: .
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEEPAGENTS_MODEL=${DEEPAGENTS_MODEL:-anthropic:claude-sonnet-4-6}
+      - LANGFUSE_PUBLIC_KEY=pk-lf-local
+      - LANGFUSE_SECRET_KEY=sk-lf-local
+      - LANGFUSE_HOST=http://langfuse:3000
+    depends_on:
+      - langfuse
+
+  langfuse:
+    image: langfuse/langfuse:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/langfuse
+      - NEXTAUTH_SECRET=secret
+      - SALT=salt
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=langfuse
+    volumes:
+      - langfuse-data:/var/lib/postgresql/data
+
+volumes:
+  langfuse-data:
+EOF
+----
+
+. Start the stack:
++
+[tabs]
+====
+Podman::
++
+[source,role="execute"]
+----
+cd solutions/capstone
+podman compose up -d
+----
+
+Docker::
++
+[source,role="execute"]
+----
+cd solutions/capstone
+docker compose up -d
+----
+====
++
+This starts three containers: your agent, LangFuse for tracing, and PostgreSQL for LangFuse's storage.
+
+. Open LangFuse at http://localhost:3000 to see traces from your agent.
+
+. Stop the stack when done:
++
+[tabs]
+====
+Podman::
++
+[source,role="execute"]
+----
+podman compose down
+----
+
+Docker::
++
+[source,role="execute"]
+----
+docker compose down
+----
+====
+
+== Generalizing the pattern
+
+The Dockerfile and Compose setup above work for **any** Deep Agent project. Here's what to change:
+
+[cols="2,3",options="header"]
+|===
+|What to change |How
+
+|Application code
+|Replace `COPY aiops/ ./aiops/` with your project directory
+
+|Entrypoint
+|Replace `CMD ["python", "aiops/agent.py"]` with your main script
+
+|Dependencies
+|Update `pyproject.toml` with your project's dependencies
+
+|Environment variables
+|Add any provider-specific API keys (`OPENAI_API_KEY`, etc.)
+
+|Config files
+|Mount `subagents.yaml`, skills directories, and `AGENTS.md` as volumes for runtime updates without rebuilding
+|===
+
+TIP: For development, mount your config files as volumes so you can iterate without rebuilding: `podman run -v ./subagents.yaml:/app/aiops/subagents.yaml:Z ...`. This preserves the "config drives behavior" pattern from the capstone.
+
+== Module summary
+
+You've containerized a Deep Agent for portable, reproducible deployment:
+
+* **Multi-stage Dockerfile** with `uv` for fast, deterministic builds
+* **Runtime configuration** via environment variables (API keys, model selection)
+* **Compose stack** with LangFuse for production observability
+* **Reusable pattern** — swap the app code and entrypoint for any Deep Agent project
+
+Next: deploy this container to OpenShift or Kubernetes for production scale.

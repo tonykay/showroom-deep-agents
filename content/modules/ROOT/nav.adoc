@@ -25,4 +25,6 @@
 
 .Bonus Modules
 * xref:13-bonus-langfuse.adoc[Tracing with LangFuse]
+* xref:15-bonus-containers.adoc[Deploying with Containers]
+* xref:16-bonus-openshift-k8s.adoc[Deploying to OpenShift/Kubernetes]
 * xref:14-bonus-resources.adoc[Resources]

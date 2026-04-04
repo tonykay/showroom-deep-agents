@@ -1,0 +1,456 @@
+= Bonus: Deploying to OpenShift/Kubernetes
+:source-highlighter: rouge
+
+You've containerized your Deep Agent. Now let's deploy it to a cluster for production use — with secrets management, config-driven updates, and external access.
+
+This module builds on the container image from the previous module. The same manifests work on both OpenShift and Kubernetes with minor differences (Route vs Ingress for external access).
+
+== What you'll learn
+
+* Push your agent image to a container registry
+* Create Kubernetes manifests (Deployment, Secret, ConfigMap, Service)
+* Deploy and manage your agent on OpenShift or Kubernetes
+* Expose your agent externally via Route (OpenShift) or Ingress (Kubernetes)
+* Update agent configuration without rebuilding the image
+
+== Exercise 1: Push to a registry
+
+Before deploying to a cluster, you need your image in a registry the cluster can pull from.
+
+. Tag and push the image:
++
+[tabs]
+====
+Podman (Quay.io)::
++
+[source,role="execute"]
+----
+podman tag aiops-agent:latest quay.io/${QUAY_USER}/aiops-agent:latest
+podman push quay.io/${QUAY_USER}/aiops-agent:latest
+----
+
+Docker (Docker Hub)::
++
+[source,role="execute"]
+----
+docker tag aiops-agent:latest ${DOCKER_USER}/aiops-agent:latest
+docker push ${DOCKER_USER}/aiops-agent:latest
+----
+
+OpenShift Internal Registry::
++
+[source,role="execute"]
+----
+oc registry login
+podman tag aiops-agent:latest $(oc registry info)/${PROJECT}/aiops-agent:latest
+podman push $(oc registry info)/${PROJECT}/aiops-agent:latest
+----
+====
++
+Replace `${QUAY_USER}`, `${DOCKER_USER}`, or `${PROJECT}` with your actual values.
+
+== Exercise 2: Create Kubernetes manifests
+
+We'll create four manifests that separate concerns cleanly. This pattern works for any Deep Agent — the manifests are generic, only the ConfigMap contents are project-specific.
+
+. Create the namespace/project:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc new-project aiops-agent
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl create namespace aiops-agent
+kubectl config set-context --current --namespace=aiops-agent
+----
+====
+
+. Create a Secret for API keys:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc create secret generic agent-secrets \
+  --from-literal=ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl create secret generic agent-secrets \
+  --from-literal=ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
+----
+====
++
+IMPORTANT: Never store API keys in YAML files committed to git. Use `create secret` from the CLI or integrate with a secrets manager (Vault, AWS Secrets Manager, etc.) in production.
+
+. Create a ConfigMap for the subagent configuration:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc create configmap agent-config \
+  --from-file=subagents.yaml=solutions/capstone/aiops/subagents.yaml \
+  --from-file=AGENTS.md=solutions/capstone/aiops/AGENTS.md
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl create configmap agent-config \
+  --from-file=subagents.yaml=solutions/capstone/aiops/subagents.yaml \
+  --from-file=AGENTS.md=solutions/capstone/aiops/AGENTS.md
+----
+====
++
+This is the key insight: **subagent YAML and memory files are deployed as ConfigMaps, not baked into the image.** You can update agent behavior by patching the ConfigMap and restarting the pod — no image rebuild needed. This is the "config drives behavior" pattern from the capstone, applied to production infrastructure.
+
+. Create the Deployment manifest:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/k8s-deployment.yaml << 'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops-agent
+  labels:
+    app: aiops-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aiops-agent
+  template:
+    metadata:
+      labels:
+        app: aiops-agent
+    spec:
+      containers:
+        - name: agent
+          image: quay.io/YOUR_USER/aiops-agent:latest    # <-- update this
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: DEEPAGENTS_MODEL
+              value: "anthropic:claude-sonnet-4-6"
+          volumeMounts:
+            - name: config
+              mountPath: /app/aiops/subagents.yaml
+              subPath: subagents.yaml
+            - name: config
+              mountPath: /app/aiops/AGENTS.md
+              subPath: AGENTS.md
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: agent-config
+EOF
+----
++
+NOTE: Update the `image:` field with your actual registry path from Exercise 1.
+
+. Create a Service:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/k8s-service.yaml << 'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiops-agent
+  labels:
+    app: aiops-agent
+spec:
+  selector:
+    app: aiops-agent
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
+EOF
+----
+
+== Exercise 3: Deploy to the cluster
+
+. Apply the manifests:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc apply -f solutions/capstone/k8s-deployment.yaml
+oc apply -f solutions/capstone/k8s-service.yaml
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl apply -f solutions/capstone/k8s-deployment.yaml
+kubectl apply -f solutions/capstone/k8s-service.yaml
+----
+====
+
+. Verify the deployment:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc get pods -w
+----
++
+.Sample output (your results may vary)
+----
+NAME                           READY   STATUS    RESTARTS   AGE
+aiops-agent-7d4f8b6c9f-x2k4p  1/1     Running   0          30s
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl get pods -w
+----
++
+.Sample output (your results may vary)
+----
+NAME                           READY   STATUS    RESTARTS   AGE
+aiops-agent-7d4f8b6c9f-x2k4p  1/1     Running   0          30s
+----
+====
++
+Press kbd:[Ctrl+C] to stop watching once the pod shows `Running`.
+
+. Check the logs to see the agent output:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc logs deployment/aiops-agent
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl logs deployment/aiops-agent
+----
+====
+
+== Exercise 4: Expose externally
+
+To access your agent from outside the cluster, you need a Route (OpenShift) or Ingress (Kubernetes).
+
+[tabs]
+====
+OpenShift (Route)::
++
+. Create a Route to expose the service:
++
+[source,role="execute"]
+----
+oc expose service aiops-agent
+----
++
+. Get the external URL:
++
+[source,role="execute"]
+----
+oc get route aiops-agent -o jsonpath='{.spec.host}'
+----
++
+.Sample output (your results may vary)
+----
+aiops-agent-aiops-agent.apps.cluster.example.com
+----
++
+. For TLS (recommended for production):
++
+[source,role="execute"]
+----
+oc create route edge aiops-agent-tls \
+  --service=aiops-agent \
+  --port=8080
+----
++
+This creates a TLS-terminated route using the cluster's wildcard certificate.
+
+Kubernetes (Ingress)::
++
+. Create an Ingress manifest:
++
+[source,role="execute"]
+----
+cat > solutions/capstone/k8s-ingress.yaml << 'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aiops-agent
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: aiops-agent.example.com    # <-- update this
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aiops-agent
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - aiops-agent.example.com      # <-- update this
+      secretName: aiops-agent-tls
+EOF
+----
++
+. Apply the Ingress:
++
+[source,role="execute"]
+----
+kubectl apply -f solutions/capstone/k8s-ingress.yaml
+----
++
+NOTE: Update the `host` field with your actual domain. TLS requires a cert-manager or manually created TLS secret.
+====
+
+== Exercise 5: Update config without rebuilding
+
+The real payoff of ConfigMap-mounted configuration — change agent behavior in production without touching the container image.
+
+. Edit the subagent configuration:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc edit configmap agent-config
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl edit configmap agent-config
+----
+====
++
+For example, change the `sre_log_analyst` model from Haiku to Sonnet, or add the `sre_communicator` subagent from Exercise 7 of the capstone.
+
+. Restart the deployment to pick up changes:
++
+[tabs]
+====
+OpenShift::
++
+[source,role="execute"]
+----
+oc rollout restart deployment/aiops-agent
+oc rollout status deployment/aiops-agent
+----
++
+.Sample output (your results may vary)
+----
+deployment.apps/aiops-agent restarted
+Waiting for deployment "aiops-agent" rollout to finish...
+deployment "aiops-agent" successfully rolled out
+----
+
+Kubernetes::
++
+[source,role="execute"]
+----
+kubectl rollout restart deployment/aiops-agent
+kubectl rollout status deployment/aiops-agent
+----
++
+.Sample output (your results may vary)
+----
+deployment.apps/aiops-agent restarted
+Waiting for deployment "aiops-agent" rollout to finish...
+deployment "aiops-agent" successfully rolled out
+----
+====
++
+The new pod starts with the updated configuration. No image rebuild, no CI/CD pipeline — just edit and restart.
+
+TIP: For zero-downtime config updates, consider using a tool like https://github.com/stakater/Reloader[Reloader] which automatically restarts pods when their ConfigMap or Secret changes.
+
+== Generalizing the pattern
+
+The Kubernetes manifests above work for any Deep Agent. Here's the mapping:
+
+[cols="2,3",options="header"]
+|===
+|Manifest |What to customize
+
+|Deployment
+|`image:` path and `DEEPAGENTS_MODEL` env var
+
+|Secret
+|API keys for your chosen provider(s)
+
+|ConfigMap
+|Your project's `subagents.yaml`, `AGENTS.md`, and skill files
+
+|Route/Ingress
+|Hostname and TLS configuration
+|===
+
+For skills, you can extend the ConfigMap to include SKILL.md files or mount an additional ConfigMap for the skills directory. The key principle remains: **code is the container image, configuration is the ConfigMap.** Iterate on behavior without rebuilding.
+
+== Module summary
+
+You've deployed a Deep Agent to a production cluster:
+
+* **Registry push** — image available to the cluster via Quay.io, Docker Hub, or internal registry
+* **Secrets** — API keys managed securely, never in manifests
+* **ConfigMap** — subagent YAML and memory mounted as files, editable without rebuild
+* **External access** — Route (OpenShift) or Ingress (Kubernetes) for outside traffic
+* **Config-driven updates** — change agent behavior in production by editing ConfigMap and restarting
+
+This completes the journey from `uv run agent.py` on your laptop to a production deployment on a cluster — with the same "config drives behavior" principle at every level.
