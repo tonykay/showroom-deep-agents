@@ -1,0 +1,476 @@
+= Bonus: Day 2 Operations — Adding Subagents & Skills on OpenShift
+:source-highlighter: rouge
+
+Your AIOps agent is deployed and handling incidents. Now the team wants to extend it — a new subagent for stakeholder communications and new skills for escalation and post-mortems. The whole point of config-driven design is that you can do this without rebuilding the container image.
+
+This module walks through the complete day 2 workflow: understanding what's mounted, adding new capabilities, rolling out changes, and understanding the impact on running workloads.
+
+== What you'll learn
+
+* How ConfigMaps map to files inside a Deep Agent pod
+* Add a new subagent to a running deployment via ConfigMap
+* Mount new skills as additional ConfigMaps
+* Perform a safe rollout and understand what happens to in-flight work
+* Verify that the agent discovers new subagents and skills
+
+== Exercise 1: Anatomy of the ConfigMap
+
+Before changing anything, let's understand what's currently deployed and how the agent reads its configuration.
+
+. Inspect the existing ConfigMap:
++
+[source,role="execute"]
+----
+oc get configmap agent-config -o yaml
+----
++
+.Sample output (your results may vary)
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-config
+  namespace: aiops-agent
+data:
+  AGENTS.md: |
+    # AIOps Team Operational Context
+    ...
+  subagents.yaml: |
+    sre_log_analyst:
+      description: >
+        ALWAYS use this first to analyze logs...
+    ...
+----
++
+The ConfigMap stores two files as keys in `data:`. Each key becomes a file when mounted into the pod.
+
+. Check how the Deployment mounts these files:
++
+[source,role="execute"]
+----
+oc get deployment aiops-agent -o jsonpath='{.spec.template.spec.containers[0].volumeMounts}' | python3 -m json.tool
+----
++
+.Sample output (your results may vary)
+----
+[
+    {
+        "mountPath": "/app/aiops/subagents.yaml",
+        "name": "config",
+        "subPath": "subagents.yaml"
+    },
+    {
+        "mountPath": "/app/aiops/AGENTS.md",
+        "name": "config",
+        "subPath": "AGENTS.md"
+    }
+]
+----
++
+Each ConfigMap key is mounted to a specific path inside the container using `subPath`. When the agent starts, it reads:
++
+* `/app/aiops/subagents.yaml` — loaded by `load_subagents()` to create the subagent team
+* `/app/aiops/AGENTS.md` — loaded by `MemoryMiddleware` into the system prompt
++
+The agent reads these files *at startup*. To pick up changes, the pod needs to restart — which is what a rollout does.
+
+== Exercise 2: Add a new subagent
+
+Let's add an `sre_communicator` subagent that drafts stakeholder communications during incidents.
+
+. Export the current ConfigMap to a file for editing:
++
+[source,role="execute"]
+----
+oc get configmap agent-config -o yaml > agent-config-backup.yaml
+----
+
+. Edit the ConfigMap directly — add the new subagent to subagents.yaml:
++
+[source,role="execute"]
+----
+oc edit configmap agent-config
+----
++
+In the editor, find the `subagents.yaml:` key and add the following at the end of its content (before any other keys like `AGENTS.md:`):
++
+[source,yaml]
+----
+  sre_communicator:
+    description: >
+      Use this to draft stakeholder communications about incidents.
+      Expert at translating technical details into business-friendly
+      updates for customers and leadership. Use after remediation
+      to notify affected parties.
+    model: anthropic:claude-sonnet-4-6
+    system_prompt: |
+      You are an SRE communications specialist. You draft clear,
+      honest, and professional incident updates for stakeholders.
+
+      ## Your Process
+      1. Review the incident timeline and remediation actions
+      2. Draft a customer-facing status update (non-technical)
+      3. Draft an internal incident summary (technical)
+      4. Recommend communication timing and channels
+
+      ## Tone
+      - Transparent about what happened
+      - Clear about impact and resolution
+      - Professional and calm
+      - Avoid jargon in external communications
+
+      ## Output Format
+      Produce two versions:
+      - **External** (for customers/status page): 3-4 sentences
+      - **Internal** (for engineering team): detailed timeline
+----
++
+Save and exit the editor.
+
+. Verify the change was saved:
++
+[source,role="execute"]
+----
+oc get configmap agent-config -o jsonpath='{.data.subagents\.yaml}' | grep sre_communicator
+----
++
+.Expected output
+----
+  sre_communicator:
+----
+
+No image rebuild needed. The new subagent definition lives entirely in the ConfigMap. The agent's `load_subagents()` function will pick it up on next restart.
+
+== Exercise 3: Add skills via ConfigMap
+
+Skills are directories containing `SKILL.md` files. On a cluster, we mount them from a separate ConfigMap.
+
+. Create a ConfigMap from two new skill files:
++
+[source,role="execute"]
+----
+cat > /tmp/escalation-skill.md << 'EOF'
+---
+name: escalation
+description: Procedures for escalating incidents based on severity, impact, and time-to-resolution thresholds.
+---
+
+# Escalation Skill
+
+## Escalation Triggers
+
+**Immediate Escalation** (page on-call lead):
+- Customer data at risk
+- Security breach suspected
+- Multiple services down simultaneously
+- Revenue-impacting outage exceeding 15 minutes
+
+**Standard Escalation** (notify team channel):
+- Root cause unclear after 30 minutes of investigation
+- Remediation requires high-risk actions
+- Cross-team coordination needed
+- Incident affecting more than 10% of users
+
+## Escalation Paths
+
+1. **On-call SRE Lead**: First escalation for technical decisions
+2. **Engineering Manager**: For deployment/rollback approvals
+3. **VP Engineering**: For customer-impacting decisions
+4. **Incident Commander**: For multi-team coordination
+
+## Communication Template
+
+When escalating, provide:
+- Incident summary (1-2 sentences)
+- Current impact (users affected, services down)
+- Actions taken so far
+- Reason for escalation
+- Recommended next steps
+EOF
+----
+
+. Create the postmortem skill:
++
+[source,role="execute"]
+----
+cat > /tmp/postmortem-skill.md << 'EOF'
+---
+name: postmortem
+description: Templates and procedures for writing blameless post-incident reviews with actionable follow-up items.
+---
+
+# Postmortem Skill
+
+## Blameless Postmortem Template
+
+### Incident Summary
+- **Date/Time**: When the incident occurred
+- **Duration**: Total time from detection to resolution
+- **Severity**: Impact level (P1/P2/P3/P4)
+- **Services Affected**: List of impacted services
+- **Users Affected**: Estimated scope of impact
+
+### Timeline
+Document key events chronologically:
+- Detection: How was the incident discovered?
+- Response: When was the team engaged?
+- Investigation: Key diagnostic steps taken
+- Remediation: What fixed the issue?
+- Recovery: When was normal service restored?
+
+### Root Cause Analysis
+- **What happened**: Technical description of the failure
+- **Why it happened**: Contributing factors and conditions
+- **Why it wasn't caught earlier**: Gaps in monitoring or testing
+
+### Impact
+- Customer-facing impact (error rates, downtime)
+- Internal impact (team hours, opportunity cost)
+- Financial impact (if applicable)
+
+### Action Items
+Each action item must have:
+- **Description**: Specific, actionable task
+- **Owner**: Named individual responsible
+- **Priority**: P1 (this week) / P2 (this sprint) / P3 (this quarter)
+- **Status**: Open / In Progress / Complete
+
+### Lessons Learned
+- What went well during the response?
+- What could be improved?
+- What was surprising or unexpected?
+
+## Key Principles
+- **Blameless**: Focus on systems and processes, not individuals
+- **Actionable**: Every finding should map to a concrete action item
+- **Timely**: Complete the postmortem within 5 business days
+- **Shared**: Publish to the team for collective learning
+EOF
+----
+
+. Create the ConfigMap from both files:
++
+[source,role="execute"]
+----
+oc create configmap agent-skills \
+  --from-file=escalation-SKILL.md=/tmp/escalation-skill.md \
+  --from-file=postmortem-SKILL.md=/tmp/postmortem-skill.md
+----
++
+.Sample output (your results may vary)
+----
+configmap/agent-skills created
+----
+
+. Now patch the Deployment to mount the skills ConfigMap. The skills need to be mounted as individual files in the expected directory structure:
++
+[source,role="execute"]
+----
+oc patch deployment aiops-agent --type=json -p='[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/-",
+    "value": {
+      "name": "skills",
+      "configMap": {
+        "name": "agent-skills"
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/-",
+    "value": {
+      "name": "skills",
+      "mountPath": "/app/aiops/skills/escalation/SKILL.md",
+      "subPath": "escalation-SKILL.md"
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/-",
+    "value": {
+      "name": "skills",
+      "mountPath": "/app/aiops/skills/postmortem/SKILL.md",
+      "subPath": "postmortem-SKILL.md"
+    }
+  }
+]'
+----
++
+.Sample output (your results may vary)
+----
+deployment.apps/aiops-agent patched
+----
++
+This mounts each skill file into the correct directory path that Deep Agents' `SkillsMiddleware` expects: `/app/aiops/skills/<skill-name>/SKILL.md`.
+
+NOTE: The `oc patch` triggers a rollout automatically because it changes the pod template. You don't need a separate `oc rollout restart`.
+
+== Exercise 4: Understanding the rollout
+
+The patch from Exercise 3 triggers a rolling update. Let's watch it and understand what's happening.
+
+. Watch the rollout:
++
+[source,role="execute"]
+----
+oc rollout status deployment/aiops-agent
+----
++
+.Sample output (your results may vary)
+----
+Waiting for deployment "aiops-agent" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "aiops-agent" rollout to finish: 1 old replicas are pending termination...
+deployment "aiops-agent" successfully rolled out
+----
+
+. Check the pod history:
++
+[source,role="execute"]
+----
+oc get pods -l app=aiops-agent
+----
++
+.Sample output (your results may vary)
+----
+NAME                           READY   STATUS    RESTARTS   AGE
+aiops-agent-5f8d9c7b4a-m3k7p  1/1     Running   0          15s
+----
++
+Notice the pod name has changed — it's a new pod, not the old one restarted.
+
+=== What happens during a rollout?
+
+Understanding this is critical for production confidence:
+
+[cols="1,3",options="header"]
+|===
+|Stage |What happens
+
+|**New pod starts**
+|Kubernetes creates a new pod with the updated spec (new ConfigMap mounts). The old pod keeps running.
+
+|**New pod becomes ready**
+|Once the new pod passes health checks, it starts receiving traffic.
+
+|**Old pod terminates**
+|Kubernetes sends SIGTERM to the old pod. It has a grace period (default 30s) to finish any work.
+
+|**Rollout complete**
+|Old pod is gone, new pod is running with the new configuration.
+|===
+
+=== Is work in progress impacted?
+
+**Short answer: No data is lost, but in-flight requests to the old pod may need to be retried.**
+
+Here's why Deep Agents are safe to restart:
+
+* **No state in the pod** — Deep Agents are stateless by design. The agent's configuration (subagents, skills, memory) comes from ConfigMaps, not from files written inside the container.
+
+* **Conversation state is external** — if you're using LangGraph's checkpointer for persistent conversations, that state lives in an external database (PostgreSQL, Redis), not in the pod. A new pod picks up where the old one left off.
+
+* **AGENTS.md is mounted, not written** — unlike local development where the agent can `edit_file` its own AGENTS.md, in a Kubernetes deployment the memory file is read-only (mounted from ConfigMap). Self-updating memory requires a different persistence strategy (e.g., a `StoreBackend` or external database).
+
+* **Single-request agents are inherently safe** — if your agent handles one request at a time (like the capstone's incident response), a rollout between requests has zero impact.
+
+TIP: For long-running agent tasks that might span a rollout, use LangGraph's `checkpointer` with an external database. This lets the new pod resume an interrupted conversation from the last checkpoint. See the https://langchain-ai.github.io/langgraph/concepts/persistence/[LangGraph persistence documentation] for details.
+
+== Exercise 5: Verify the changes
+
+Confirm the new subagent and skills are loaded.
+
+. Check the pod logs for skill discovery:
++
+[source,role="execute"]
+----
+oc logs deployment/aiops-agent | head -20
+----
++
+Look for log lines indicating the skills middleware discovered your new skills and the subagent loader found `sre_communicator`.
+
+. Verify the mounted files exist inside the pod:
++
+[source,role="execute"]
+----
+oc exec deployment/aiops-agent -- ls -la /app/aiops/skills/
+----
++
+.Sample output (your results may vary)
+----
+drwxr-xr-x 2 root root  escalation
+drwxr-xr-x 2 root root  postmortem
+drwxr-xr-x 2 root root  log-analysis
+drwxr-xr-x 2 root root  diagnostics
+drwxr-xr-x 2 root root  remediation
+----
+
+. Verify the subagents.yaml includes the new communicator:
++
+[source,role="execute"]
+----
+oc exec deployment/aiops-agent -- grep "sre_communicator" /app/aiops/subagents.yaml
+----
++
+.Expected output
+----
+  sre_communicator:
+----
+
+. Test the new subagent by sending a prompt that should trigger it. You can port-forward to the pod and test directly:
++
+[source,role="execute"]
+----
+oc port-forward deployment/aiops-agent 8080:8080
+----
++
+Then in another terminal, send a test request that references stakeholder communication. The ops_manager should delegate to `sre_communicator`.
+
+== Day 2 operations cheat sheet
+
+Here's a quick reference for common day 2 tasks:
+
+[cols="2,3",options="header"]
+|===
+|Task |Command
+
+|Edit subagents.yaml
+|`oc edit configmap agent-config`
+
+|Edit AGENTS.md memory
+|`oc edit configmap agent-config`
+
+|Add new skills
+|`oc create configmap <name> --from-file=...` then patch the Deployment
+
+|Change model
+|`oc set env deployment/aiops-agent DEEPAGENTS_MODEL=anthropic:claude-haiku-4-5-20251001`
+
+|Restart to pick up changes
+|`oc rollout restart deployment/aiops-agent`
+
+|Check rollout status
+|`oc rollout status deployment/aiops-agent`
+
+|Roll back a bad change
+|`oc rollout undo deployment/aiops-agent`
+
+|View agent logs
+|`oc logs deployment/aiops-agent`
+
+|Exec into pod
+|`oc exec -it deployment/aiops-agent -- /bin/bash`
+|===
+
+== Module summary
+
+You've performed a complete day 2 operation on a deployed Deep Agent:
+
+* **ConfigMap anatomy** — understood how files are mounted and read at startup
+* **Added a subagent** — `sre_communicator` defined in YAML, deployed via ConfigMap edit
+* **Added skills** — escalation and postmortem skills mounted from a separate ConfigMap
+* **Safe rollouts** — understood the RollingUpdate strategy and why Deep Agents are stateless
+* **Zero data loss** — agent state lives in external systems, not in the pod
+
+The pattern is clear: **the container image is stable infrastructure, ConfigMaps are the control plane for agent behavior.** Model changes, new subagents, new skills, updated memory — all deployed without a single `docker build`.

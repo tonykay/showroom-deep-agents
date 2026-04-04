@@ -27,4 +27,5 @@
 * xref:13-bonus-langfuse.adoc[Tracing with LangFuse]
 * xref:15-bonus-containers.adoc[Deploying with Containers]
 * xref:16-bonus-openshift-k8s.adoc[Deploying to OpenShift/Kubernetes]
+* xref:17-bonus-day2-ops.adoc[Day 2: Adding Subagents & Skills on OpenShift]
 * xref:14-bonus-resources.adoc[Resources]
