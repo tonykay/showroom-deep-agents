@@ -65,12 +65,13 @@ NOTE: LLM responses are non-deterministic -- the agent may format or word its ou
 +
 What just happened? The `create_deep_agent()` function gave you a fully-configured LangGraph agent. When you called `invoke()`, the agent processed your message and returned a dictionary with a `messages` key containing the conversation history.
 +
-Notice the eight tools listed in the output -- these are the four pillars in action:
+Notice the tools listed in the output -- these map directly to three of the four pillars:
 +
-* **Filesystem tools** (`read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`) -- Pillar 4
-* **Planning** (`write_todos`) -- Pillar 2
-* **Sub-agents** (`task`) -- Pillar 3
-* **Pillar 1** (the detailed system prompt) is what taught the agent how to describe and use all of these
+* **Pillar 2 — Planning**: `write_todos` creates and manages a structured task list to keep the agent organized on complex, multi-step work
+* **Pillar 3 — Sub-agents**: `task` spawns an isolated subagent to handle a piece of work independently, returning only the result
+* **Pillar 4 — Filesystem**: `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep` give the agent full access to read, write, search, and navigate files
++
+And **Pillar 1 — the detailed system prompt**? That's what taught the agent how to describe and use all of these tools in the first place. You don't see it in the tool list, but it's the foundation that makes everything else work.
 
 === Choosing your model
 
