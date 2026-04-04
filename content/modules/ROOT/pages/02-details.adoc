@@ -199,18 +199,16 @@ installation complete!
 deepagents --help
 ----
 +
-.Sample output
+.Sample output (your results may vary)
 ----
-Usage: deepagents [OPTIONS] [PROMPT]
+usage: deepagents [-r [ID]] [-a NAME] [-M MODEL] [-m TEXT] [-q]
+                  [--no-stream] [--json] [-y] [-v] [-h]
+                  {help,list,reset,skills,threads} ...
 
-  Deep Agents CLI - The batteries-included agent harness
-
-Options:
-  --model TEXT           Model to use (default: anthropic:claude-sonnet-4-6)
-  --system-prompt TEXT   Custom system prompt
-  --headless             Run without TUI
-  --help                 Show this message and exit
+Deep Agents CLI - The batteries-included agent harness
 ----
++
+You should see the CLI's help output with available options and subcommands.
 
 == Optional: Local Showroom experience
 

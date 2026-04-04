@@ -259,11 +259,7 @@ Compare the planning behavior with and without the custom instructions. The syst
 
 [NOTE]
 ====
-**CLI Usage**: You can also pass system prompts via the CLI:
-[source,bash]
-----
-deepagents --system-prompt "You are a Python expert..." "Review my code"
-----
+**CLI Note**: The `deepagents` CLI uses its own built-in system prompt and doesn't support custom system prompts via command-line flags. Custom system prompts are a programmatic feature — use them in your Python scripts with `create_deep_agent(system_prompt=...)`. The CLI is best for quick interactive sessions with the default harness behavior.
 ====
 
 == Module Summary
