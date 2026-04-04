@@ -164,7 +164,7 @@ export DEEPAGENTS_FAST_MODEL="openai:gpt-oss-20b"
 
 NOTE: Make sure `langchain-openai` is installed (`uv add langchain-openai`). The package is needed for any `openai:` prefixed model, whether it points at OpenAI's API or your own endpoint.
 
-WARNING: **Reasoning models** (OpenAI o-series, `gpt-oss-120b`, and similar) may produce verbose Pydantic serialization warnings when used with Deep Agents. These models return `ResponseReasoningItem` objects containing chain-of-thought tokens that LangChain's schemas don't expect. The agent still works — you'll see the correct output — but the warnings are noisy. If you encounter this, try a non-reasoning model on the same endpoint (e.g., `qwen3-235b` or `llama-scout-17b` instead of `gpt-oss-120b`).
+WARNING: **Reasoning models** (OpenAI o-series, `gpt-oss-120b`, `qwen3-235b`, and similar models that produce chain-of-thought tokens) may cause errors or verbose Pydantic warnings when used with Deep Agents. These models return reasoning/thinking tokens that `langchain-openai` cannot parse reliably — ranging from noisy warnings to `TypeError` crashes. Use **non-reasoning models** on your endpoint instead (e.g., `llama-scout-17b`, `minimax-m2`, or `gpt-oss-20b`). If your endpoint offers a "no-think" variant (e.g., `qwen3-235b-no-think`), that may also work.
 
 IMPORTANT: Each provider requires its own LangChain integration package. If you switch providers and see an `ImportError`, install the corresponding package with `uv`:
 
