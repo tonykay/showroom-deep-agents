@@ -25,6 +25,7 @@ You'll see just how little code it takes to get started.
 cat > hello_agent.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -34,7 +35,7 @@ result = agent.invoke({"messages": [("user",
     "List your tools. Be brief — just name and one-line description for each."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -255,6 +256,7 @@ cat > explore_tools.py << 'EOF'
 import os
 import re
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -266,7 +268,7 @@ result = agent.invoke({"messages": [("user",
 )]})
 
 # Clean up any markdown formatting for terminal display
-content = result["messages"][-1].content
+content = agent_response(result)
 content = re.sub(r'\*\*([^*]+)\*\*', r'\1', content)  # Remove bold
 content = re.sub(r'`([^`]+)`', r'\1', content)         # Remove code ticks
 print(content)

@@ -141,6 +141,40 @@ Agent type: CompiledStateGraph
 +
 If you see this output, your environment is ready for the workshop.
 
+== Create the workshop utility
+
+Throughout this workshop, scripts need to print agent responses. Different model providers return content in different formats — Anthropic returns a plain string, some OpenAI-compatible endpoints return a list of content blocks. This small utility handles both:
+
+. Create `utils.py`:
++
+[source,role="execute"]
+----
+cat > utils.py << 'EOF'
+def agent_response(result):
+    """Extract the text content from an agent result.
+
+    Handles both string content (Anthropic, OpenAI) and list-of-blocks
+    content (some vLLM/LiteLLM endpoints).
+    """
+    content = result["messages"][-1].content
+    if isinstance(content, list):
+        return "\n".join(
+            b["text"] for b in content
+            if isinstance(b, dict) and b.get("type") == "text"
+        )
+    return content
+EOF
+----
++
+You'll use this in scripts with a simple import:
++
+[source,python]
+----
+from utils import agent_response
+
+print(agent_response(result))
+----
+
 == Install the Deep Agents CLI
 
 . Install the CLI:
