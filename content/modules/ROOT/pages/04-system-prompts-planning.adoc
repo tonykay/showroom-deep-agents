@@ -145,6 +145,7 @@ For complex multi-step tasks, Deep Agents can plan out the work before executing
 cat > planning_agent.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -156,12 +157,17 @@ result = agent.invoke({"messages": [("user",
     "Plan out the work first, then create the files."
 )]})
 
+# Show planning tool calls
 for msg in result["messages"]:
     if hasattr(msg, 'tool_calls'):
         for tc in msg.tool_calls:
             if tc['name'] == 'write_todos':
                 print("Planning step detected!")
                 print(f"Todos: {tc['args']}")
+
+# Show the final response
+print("\n=== Agent Response ===")
+print(agent_response(result))
 EOF
 ----
 
@@ -198,6 +204,7 @@ You can use system prompts to influence how the agent plans.
 cat > guided_planning.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -215,12 +222,17 @@ result = agent.invoke({"messages": [("user",
     "user authentication, database models, and tests."
 )]})
 
+# Show planning tool calls
 for msg in result["messages"]:
     if hasattr(msg, 'tool_calls'):
         for tc in msg.tool_calls:
             if tc['name'] == 'write_todos':
                 print("Planning step detected!")
                 print(f"Todos: {tc['args']}")
+
+# Show the final response
+print("\n=== Agent Response ===")
+print(agent_response(result))
 EOF
 ----
 
