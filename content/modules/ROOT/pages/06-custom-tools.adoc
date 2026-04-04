@@ -49,7 +49,9 @@ uv run simple_tool.py
 There are 9 words in that sentence.
 ----
 
-Notice how custom tools are passed via the `tools=[...]` parameter and are added alongside (not replacing) the built-in tools. The `@tool` decorator automatically creates a tool schema from your function's signature and docstring.
+Notice how custom tools are passed via the `tools=[...]` parameter and are added alongside (not replacing) the built-in tools.
+
+IMPORTANT: **Your docstring IS your schema.** The `@tool` decorator uses Pydantic under the hood to convert your function's type hints and docstring into a JSON schema that the LLM reads to understand how to call your tool. A clear, specific docstring means better tool routing. A vague or missing docstring means the LLM will guess — and guess wrong. Write docstrings as if you're explaining the tool to a colleague who's never seen it before.
 
 == Exercise 2: Tool with Structured Input
 
@@ -297,6 +299,10 @@ Result: The result is 5000.
 ----
 
 The agent pauses before executing the specified tool and waits for approval. This is critical for tools with side effects like sending emails, making purchases, or deleting files.
+
+=== Beyond custom tools: MCP integration
+
+Deep Agents can also consume https://modelcontextprotocol.io[MCP (Model Context Protocol)] servers as tools. MCP is an open standard that lets you connect to community-built integrations — databases, APIs, file systems, and more — without writing custom tool code. If an MCP server exists for a service you want to integrate, you can plug it into your agent directly. This is beyond the scope of this module but worth knowing about as your agent systems grow.
 
 == Module Summary
 

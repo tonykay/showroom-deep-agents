@@ -131,6 +131,8 @@ You'll see this is no simple "you are a helpful assistant" prompt. It's a compre
 
 This is the "detailed system prompt" pillar in action — giving the LLM clear, specific guidance on how to operate as an agent.
 
+NOTE: You might wonder about the cost of such a large system prompt. Claude Code's system prompt is reportedly around 16,000 words — a third of a novel! This is viable because Deep Agents includes `AnthropicPromptCachingMiddleware` in its middleware stack, which caches the system prompt across invocations. You pay the full token cost once, then subsequent calls reuse the cached prompt at a fraction of the cost. Verbose, detailed system prompts are an investment that pays off through caching.
+
 == Exercise 3: Planning with Todos
 
 For complex multi-step tasks, Deep Agents can plan out the work before executing. Let's see this in action.

@@ -31,6 +31,10 @@ These posts from the LangChain team explain the design decisions and evolution o
 * https://blog.langchain.com/using-skills-with-deep-agents/[Using Skills with Deep Agents] — how progressive disclosure works, the SKILL.md format, and integration with the CLI
 * https://blog.langchain.com/building-multi-agent-applications-with-deep-agents/[Building Multi-Agent Applications with Deep Agents] — the subagent pattern for context isolation and specialization, combined with skills
 
+== Podcasts & Videos
+
+* https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate[Talk Python: Deep Agents — LangChain's SDK for Agents That Plan and Delegate] — Sydney Runkle (LangChain) discusses the harness architecture, why docstrings power tool schemas, prompt caching at scale, and non-coding applications of deep agents
+
 == Observability & Tracing
 
 * https://langfuse.com/docs[LangFuse Documentation] — open-source LLM observability platform

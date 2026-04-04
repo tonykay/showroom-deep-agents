@@ -11,7 +11,9 @@ This is the "dumb zone": the point where an agent with a 200K token context wind
 
 Subagents solve this with a simple principle: fresh, isolated context per task.
 
-When your main agent delegates work to a subagent, that subagent starts with a clean slate—no conversation history, no baggage. It receives only the task description, executes with full focus, and returns the result. The main agent integrates that result and continues.
+When your main agent delegates work to a subagent, that subagent starts with a clean slate — no conversation history, no baggage. It receives only the task description, executes with full focus, and returns the result. The main agent integrates that result and continues.
+
+TIP: This isn't just about avoiding errors — smaller subagents with focused context often *outperform* large agents with full history. Models reason better when given only the information relevant to the task at hand. Context isolation is a performance optimization, not just a memory management technique.
 
 Here's the pattern:
 

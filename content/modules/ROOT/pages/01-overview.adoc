@@ -4,7 +4,9 @@ Welcome to the Deep Agents workshop. In this hands-on tutorial, you'll learn how
 
 == What are Deep Agents?
 
-Deep Agents is an open-source "agent harness" created by LangChain, released under the MIT license. It's not just another tool-calling LLM loop — it's a production-ready framework inspired by Claude Code that brings together planning, tool use, subagent delegation, and context management into a cohesive system.
+Deep Agents is an open-source "agent harness" created by LangChain, released under the MIT license. The key insight is that the intelligence in tools like Claude Code comes from the *harness* — the system prompts, planning tools, filesystem access, and middleware — not just the raw LLM. Deep Agents packages that harness into a reusable framework.
+
+A useful way to think about it: **shallow agents** handle simple, single-purpose tasks (like booking a flight) with a few tool calls. **Deep agents** access extensive context, organize complex multi-step work, run sustainably over long periods, and recover from mistakes through iteration. This workshop teaches you to build the deep kind.
 
 You can install it with a simple `uv add deepagents` command.
 
