@@ -116,9 +116,52 @@ Deep Agents uses a `"provider:model"` format that supports any LiteLLM-compatibl
 
 |Ollama (local, larger)
 |`"ollama:qwen2.5:32b"`
+
+|Remote endpoint (vLLM, LiteLLM)
+|`"openai:your-model-name"` + set `OPENAI_API_BASE`
 |===
 
 TIP: If you're using Ollama, make sure it's running locally (`ollama serve`) and that you've pulled the model first (`ollama pull llama3.1:8b`). No API key is needed for local models. Be aware that smaller local models may struggle with complex tool-use tasks in later modules -- the exercises were designed and tested with Claude Sonnet.
+
+=== Using a remote OpenAI-compatible endpoint
+
+If you have access to a vLLM, LiteLLM proxy, or any OpenAI API-compatible endpoint serving models, you can point the entire workshop at it using just environment variables — no code changes needed.
+
+LangChain's OpenAI integration honors the `OPENAI_API_BASE` environment variable. Set it along with your API key and model name:
+
+[source,role="execute"]
+----
+export OPENAI_API_BASE="https://your-llm-endpoint.example.com/v1"
+export OPENAI_API_KEY="sk-your-key-here"
+export DEEPAGENTS_MODEL="openai:gpt-oss-20b"
+----
+
+That's it. Every script in the workshop will now use your remote endpoint instead of the public OpenAI API. The `openai:` prefix tells Deep Agents to use the OpenAI provider, and `OPENAI_API_BASE` redirects it to your endpoint.
+
+For example, if your team runs a LiteLLM proxy serving multiple models:
+
+[source,role="execute"]
+----
+export OPENAI_API_BASE="https://litellm-prod.apps.example.com/v1"
+export OPENAI_API_KEY="sk-your-team-key"
+export DEEPAGENTS_MODEL="openai:llama-scout-17b"
+----
+
+To try different models on the same endpoint, just change `DEEPAGENTS_MODEL` — the endpoint and key stay the same:
+
+[source,role="execute"]
+----
+export DEEPAGENTS_MODEL="openai:qwen3-235b"
+----
+
+This also works for `DEEPAGENTS_FAST_MODEL` in modules that use cheaper models for subagents:
+
+[source,role="execute"]
+----
+export DEEPAGENTS_FAST_MODEL="openai:gpt-oss-20b"
+----
+
+NOTE: Make sure `langchain-openai` is installed (`uv add langchain-openai`). The package is needed for any `openai:` prefixed model, whether it points at OpenAI's API or your own endpoint.
 
 IMPORTANT: Each provider requires its own LangChain integration package. If you switch providers and see an `ImportError`, install the corresponding package with `uv`:
 
