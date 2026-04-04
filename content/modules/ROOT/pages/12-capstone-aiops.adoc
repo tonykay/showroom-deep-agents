@@ -708,6 +708,7 @@ from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 from loader import load_subagents
 from tools import execute_remediation, fetch_logs, query_metrics
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -757,7 +758,7 @@ if __name__ == "__main__":
         "Investigate and propose remediation."
     )]})
 
-    print(result["messages"][-1].content)
+    print(agent_response(result))
 EOF
 ----
 

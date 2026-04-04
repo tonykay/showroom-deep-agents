@@ -73,6 +73,7 @@ cat > traced_agent.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from langfuse.langchain import CallbackHandler
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -90,7 +91,7 @@ result = agent.invoke(
     config={"callbacks": [langfuse_handler]},
 )
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 
 # Flush to ensure all traces are sent
 langfuse_handler.langfuse.flush()
@@ -133,6 +134,7 @@ cat > traced_subagents.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from langfuse.langchain import CallbackHandler
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -160,7 +162,7 @@ result = agent.invoke(
     config={"callbacks": [langfuse_handler]},
 )
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 langfuse_handler.langfuse.flush()
 print("\nTrace sent to LangFuse!")
 EOF

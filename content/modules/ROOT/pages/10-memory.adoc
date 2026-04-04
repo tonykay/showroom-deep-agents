@@ -59,6 +59,7 @@ Use memory for context that should influence every interaction: coding standards
 cat > test_memory.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -71,7 +72,7 @@ result = agent.invoke({"messages": [("user",
     "What coding standards should I follow in this project?"
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -104,6 +105,7 @@ Agents can modify their own AGENTS.md to learn and persist knowledge across conv
 cat > update_memory.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -117,7 +119,7 @@ result = agent.invoke({"messages": [("user",
     "Update the project's AGENTS.md to include this coding standard."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -198,6 +200,7 @@ EOF
 cat > layered_memory.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -210,7 +213,7 @@ result = agent.invoke({"messages": [("user",
     "How should I install dependencies for this project?"
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -261,6 +264,7 @@ Memory sits near the bottom of the stack because it shapes the system prompt tha
 cat > full_stack.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
@@ -287,7 +291,7 @@ result = agent.invoke({"messages": [("user",
     "Make sure your review follows our project's coding standards."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -343,6 +347,7 @@ export OPENAI_API_KEY=your-key-here
 cat > multi_provider.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -371,7 +376,7 @@ result = agent.invoke({"messages": [("user",
     "Research the top 3 Python async frameworks and have the analyst compare them."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 

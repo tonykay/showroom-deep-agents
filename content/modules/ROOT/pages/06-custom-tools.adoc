@@ -15,6 +15,7 @@ cat > simple_tool.py << 'EOF'
 import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -33,7 +34,7 @@ result = agent.invoke({"messages": [("user",
     "'The quick brown fox jumps over the lazy dog'"
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -66,6 +67,7 @@ import os
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -95,7 +97,7 @@ result = agent.invoke({"messages": [("user",
     "Analyze this code: def add(a, b): return a + b"
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -162,6 +164,7 @@ cat > multiple_tools.py << 'EOF'
 import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -199,7 +202,7 @@ questions = [
 for question in questions:
     print(f"\nQuestion: {question}")
     result = agent.invoke({"messages": [("user", question)]})
-    print(f"Answer: {result['messages'][-1].content}")
+    print(f"Answer: {agent_response(result)}")
 EOF
 ----
 
@@ -236,6 +239,7 @@ cat > interrupt_tool.py << 'EOF'
 import os
 from langchain_core.tools import tool
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -276,11 +280,11 @@ if state.next:
     if approval.lower() == "y":
         # Continue execution
         result = agent.invoke(None, config=config)
-        print(f"Result: {result['messages'][-1].content}")
+        print(f"Result: {agent_response(result)}")
     else:
         print("Execution cancelled")
 else:
-    print(f"Result: {result['messages'][-1].content}")
+    print(f"Result: {agent_response(result)}")
 EOF
 ----
 

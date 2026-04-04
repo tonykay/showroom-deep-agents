@@ -22,6 +22,7 @@ cat > file_tools.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -36,7 +37,7 @@ result = agent.invoke({"messages": [("user",
     "Then list the files you created and read back the README to verify it."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -88,6 +89,7 @@ cat > execute_tool.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -101,7 +103,7 @@ result = agent.invoke({"messages": [("user",
     "then run 'ls -la' to show the current directory."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -146,6 +148,7 @@ cat > scoped_backend.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -161,7 +164,7 @@ result = agent.invoke({"messages": [("user",
     "Then try to read /etc/passwd."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -203,6 +206,7 @@ cat > state_backend.py << 'EOF'
 import os
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -216,7 +220,7 @@ result = agent.invoke({"messages": [("user",
     "Then read it back to verify."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 

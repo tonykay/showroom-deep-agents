@@ -39,6 +39,7 @@ Let's define and use a research subagent.
 cat > research_demo.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -62,7 +63,7 @@ result = agent.invoke({"messages": [("user",
     "Delegate this to your research subagent."
 )]})
 
-print(result["messages"][-1].content)
+print(agent_response(result))
 EOF
 ----
 
@@ -171,6 +172,7 @@ The `description` field is not just documentation—it's the primary routing mec
 cat > routing_demo.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -239,6 +241,7 @@ The simple factual question routes to `fact_finder`. The complex decision routes
 cat > routing_demo2.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -299,6 +302,7 @@ Different tasks need different models. Research might work fine with a fast, che
 cat > model_routing.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
@@ -368,6 +372,7 @@ This is useful when you want context isolation without specialization—just a f
 cat > default_subagent.py << 'EOF'
 import os
 from deepagents import create_deep_agent
+from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -382,7 +387,7 @@ result = agent.invoke({"messages": [("user",
 )]})
 
 print("=== Result ===")
-print(result["messages"][-1].content)
+print(agent_response(result))
 print("\n=== Delegation ===")
 for msg in result["messages"]:
     if hasattr(msg, 'tool_calls') and msg.tool_calls:
