@@ -1,0 +1,212 @@
+= Bonus: JupyterLab — The AI Engineer's Mixing Deck
+:source-highlighter: rouge
+
+Building agents is an experiment loop: change a prompt, swap a model, tweak a skill, observe the output, repeat. Scripts make you re-run everything from scratch each time. JupyterLab lets you re-run just the cell you changed.
+
+Think of a notebook as a mixing deck — each cell is a fader you can adjust independently. Change the system prompt in cell 3, re-run it, compare with the previous output. Swap the model in cell 4, re-run, compare speed and quality. The rest of your setup stays warm in memory.
+
+This is especially powerful for Deep Agents because the `create_deep_agent()` call is cheap — it builds a graph, not a connection. The expensive part is the LLM call. So creating a fresh agent with a tweaked config and running one prompt is fast, focused, and repeatable.
+
+== What you'll learn
+
+* Install and configure JupyterLab with `uv`
+* Download and run the experiment notebook
+* Use the cell-by-cell experiment loop to iterate on prompts, skills, models, and subagents
+
+== Exercise 1: Install JupyterLab
+
+. Add JupyterLab and the IPython kernel to your workshop project:
++
+[source,role="execute"]
+----
+cd deep-agents-workshop
+uv add jupyterlab ipykernel
+----
++
+.Sample output (your results may vary)
+----
+Resolved 45 packages in 2.1s
+...
+Installed 45 packages in 1.2s
+ + jupyterlab==4.3.6
+ + ipykernel==6.29.5
+----
+
+. Register the project's Python as a Jupyter kernel:
++
+[source,role="execute"]
+----
+uv run python -m ipykernel install --user --name deep-agents --display-name "Deep Agents (Python 3.13)"
+----
++
+.Sample output (your results may vary)
+----
+Installed kernelspec deep-agents in /Users/you/.local/share/jupyter/kernels/deep-agents
+----
++
+This ensures JupyterLab uses your project's virtual environment (with `deepagents` installed), not the system Python.
+
+=== Optional: Useful extensions
+
+These extensions enhance the JupyterLab experience but are not required:
+
+[cols="2,3",options="header"]
+|===
+|Extension |What it does
+
+|`jupyterlab-vim`
+|Vim keybindings in the editor — if you're a vim user, this makes notebook editing feel natural
+
+|`jupyterlab_pygments`
+|Better syntax highlighting for code cells using Pygments themes
+
+|`jupyter-lsp`
+|Language Server Protocol support — adds autocompletion, hover docs, and diagnostics to code cells
+|===
+
+To install any of these:
+
+[source,role="execute"]
+----
+uv add jupyterlab-vim jupyterlab_pygments jupyter-lsp
+----
+
+== Exercise 2: Download the experiment notebook
+
+The workshop includes a pre-built notebook with four experiments you can run and modify.
+
+. Download the notebook:
++
+[source,role="execute"]
+----
+wget -O deep-agents-lab.ipynb https://raw.githubusercontent.com/tonykay/showroom-deep-agents/main/notebooks/deep-agents-lab.ipynb
+----
++
+.Sample output (your results may vary)
+----
+Saving to: 'deep-agents-lab.ipynb'
+deep-agents-lab.ipynb    100%[==>]   8.2K  --.-KB/s    in 0s
+----
+
+== Exercise 3: Launch JupyterLab
+
+. Start JupyterLab:
++
+[source,role="execute"]
+----
+uv run jupyter lab
+----
++
+.Sample output (your results may vary)
+----
+[I 2026-04-04 10:00:00 ServerApp] Jupyter Server is running at:
+[I 2026-04-04 10:00:00 ServerApp] http://localhost:8888/lab?token=abc123...
+----
++
+Your browser should open automatically. If not, click the URL in the output.
+
+. Open `deep-agents-lab.ipynb` from the file browser on the left.
+
+. Make sure the kernel is set to **"Deep Agents (Python 3.13)"** — check the top-right corner of the notebook. If it shows a different kernel, click it and select the correct one.
+
+== Exercise 4: The experiment loop
+
+The notebook has four experiments. Here's how to use them:
+
+=== Experiment 1: System prompt engineering
+
+This cell creates an agent with a `SYSTEM_PROMPT` and asks it to review a code snippet. The experiment:
+
+. Run the cell as-is to see the default behavior
+. Change `SYSTEM_PROMPT` — try a different persona:
++
+[source,python]
+----
+SYSTEM_PROMPT = """You are a security auditor. Only flag security issues.
+Ignore style, naming, and minor code quality concerns."""
+----
+. Re-run just this cell (kbd:[Shift+Enter])
+. Compare the output — the agent should focus exclusively on security now
+
+Try other variations: "junior developer" (more verbose explanations), "CTO" (high-level concerns only), or add constraints like "respond in exactly 3 bullet points."
+
+=== Experiment 2: Custom skills inline
+
+This cell writes a SKILL.md to disk and registers it with the agent. The experiment:
+
+. Run as-is — the default skill does a general quick review
+. Edit the `SKILL_CONTENT` to change the focus:
++
+[source,python]
+----
+SKILL_CONTENT = """---
+name: quick-review
+description: Reviews code for performance issues only.
+---
+
+# Performance Review
+
+## Check for:
+1. Unnecessary loops or iterations
+2. Missing caching opportunities
+3. Blocking I/O in hot paths
+4. Excessive memory allocation
+
+## Ignore:
+- Style and naming
+- Security (covered by separate review)
+- Documentation
+"""
+----
+. Re-run the cell — the agent now applies a performance-focused lens
+. Edit again, re-run again — each iteration takes seconds, not minutes
+
+=== Experiment 3: Model comparison
+
+This cell runs the same prompt against multiple models and shows timing. The experiment:
+
+. Uncomment additional models in `COMPARE_MODELS`
+. Run the cell — see quality and speed side by side
+. Try your remote endpoint models if you have `OPENAI_API_BASE` set
+
+This is invaluable for deciding which model to assign to which subagent — you can see the quality/cost/speed trade-off directly.
+
+=== Experiment 4: Subagent routing
+
+This cell defines two subagents and a test prompt. The experiment:
+
+. Run as-is — observe which subagent handles the prompt
+. Change `TEST_PROMPT` to something more creative — does the routing change?
+. Edit the subagent descriptions — make them more or less specific
+. Add a third subagent and see how routing adapts
+
+This is exactly how you'd tune subagent descriptions in production: iterate on the descriptions, test with representative prompts, observe the routing decisions.
+
+== The experiment loop pattern
+
+The pattern across all four experiments is the same:
+
+. **Change one variable** — prompt, skill, model, or subagent description
+. **Re-run the cell** — kbd:[Shift+Enter]
+. **Compare the output** — did the change have the effect you expected?
+. **Iterate** — adjust and re-run until you're satisfied
+
+This is faster than editing a `.py` file and running it from the terminal because:
+
+* The Python environment stays loaded (no startup cost)
+* Previous outputs stay visible for comparison (scroll up)
+* You can change and re-run any cell independently
+* Markdown cells serve as inline documentation for what you're testing
+
+TIP: When you find a configuration you like (prompt, skill, model combo), copy it back into your `.py` scripts or YAML configs. The notebook is for experimentation — the scripts are for production.
+
+== Module summary
+
+JupyterLab transforms agent development from "edit, save, run, wait" into a fast experiment loop:
+
+* **Cell-by-cell execution** — change one thing, re-run one cell, compare
+* **Visual comparison** — previous outputs stay visible as you iterate
+* **Four experiments** — system prompts, skills, models, and subagent routing
+* **Zero overhead** — `create_deep_agent()` is fast, only the LLM call costs time
+
+When you're tuning a Deep Agent system, start in a notebook. When you've found the right configuration, move it to scripts and YAML configs for deployment.
