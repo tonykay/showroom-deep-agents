@@ -279,17 +279,15 @@ kubectl logs deployment/aiops-agent
 
 To access your agent from outside the cluster, you need a Route (OpenShift) or Ingress (Kubernetes).
 
-[tabs]
-====
-OpenShift (Route)::
-+
-. Create a Route to expose the service:
+=== OpenShift: Create a Route
+
+. Expose the service:
 +
 [source,role="execute"]
 ----
 oc expose service aiops-agent
 ----
-+
+
 . Get the external URL:
 +
 [source,role="execute"]
@@ -301,7 +299,7 @@ oc get route aiops-agent -o jsonpath='{.spec.host}'
 ----
 aiops-agent-aiops-agent.apps.cluster.example.com
 ----
-+
+
 . For TLS (recommended for production):
 +
 [source,role="execute"]
@@ -313,8 +311,8 @@ oc create route edge aiops-agent-tls \
 +
 This creates a TLS-terminated route using the cluster's wildcard certificate.
 
-Kubernetes (Ingress)::
-+
+=== Kubernetes: Create an Ingress
+
 . Create an Ingress manifest:
 +
 [source,role="execute"]
@@ -345,7 +343,7 @@ spec:
       secretName: aiops-agent-tls
 EOF
 ----
-+
+
 . Apply the Ingress:
 +
 [source,role="execute"]
@@ -354,7 +352,6 @@ kubectl apply -f solutions/capstone/k8s-ingress.yaml
 ----
 +
 NOTE: Update the `host` field with your actual domain. TLS requires a cert-manager or manually created TLS secret.
-====
 
 == Exercise 5: Update config without rebuilding
 
