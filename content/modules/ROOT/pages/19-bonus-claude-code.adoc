@@ -30,7 +30,7 @@ claude mcp add-json deepagents-docs '{
     "--urls",
     "LangChain:https://docs.langchain.com/llms.txt",
     "--urls",
-    "LangGraph:https://langchain-ai.github.io/langgraph/llms.txt",
+    "LangGraph:https://docs.langchain.com/llms.txt",
     "--urls",
     "Deep Agents:https://docs.langchain.com/llms.txt",
     "--transport",
