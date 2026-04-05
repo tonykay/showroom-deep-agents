@@ -28,7 +28,7 @@ MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
-    backend=FilesystemBackend(root_dir="./workspace"),
+    backend=FilesystemBackend(root_dir="./workspace", virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
@@ -40,6 +40,8 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Notice the `virtual_mode=False` parameter — this tells the backend to work directly with the real filesystem. Without it, you'll get a deprecation warning. The `root_dir` scopes file operations to the `./workspace` directory.
 
 . Run the agent script:
 +
@@ -95,7 +97,7 @@ MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 agent = create_deep_agent(
     model=MODEL,
-    backend=FilesystemBackend(root_dir="./workspace"),
+    backend=FilesystemBackend(root_dir="./workspace", virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
@@ -152,7 +154,7 @@ from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
-backend = FilesystemBackend(root_dir="./workspace/myproject")
+backend = FilesystemBackend(root_dir="./workspace/myproject", virtual_mode=False)
 
 agent = create_deep_agent(
     model=MODEL,
@@ -264,7 +266,7 @@ from deepagents.backends import CompositeBackend, FilesystemBackend, StateBacken
 
 backend = CompositeBackend(
     mounts={
-        "/workspace": FilesystemBackend(root_dir="./workspace"),
+        "/workspace": FilesystemBackend(root_dir="./workspace", virtual_mode=False),
         "/scratch": StateBackend(),
     }
 )

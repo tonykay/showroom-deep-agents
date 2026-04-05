@@ -746,7 +746,7 @@ Your final output should include:
     subagents=load_subagents(Path("aiops/subagents.yaml")),
     tools=[fetch_logs, query_metrics, execute_remediation],
     interrupt_on={"execute_remediation": True},
-    backend=FilesystemBackend(root_dir="./aiops"),
+    backend=FilesystemBackend(root_dir="./aiops", virtual_mode=False),
 )
 
 if __name__ == "__main__":
