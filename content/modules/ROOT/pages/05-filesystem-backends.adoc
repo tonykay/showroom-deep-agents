@@ -44,10 +44,13 @@ print(agent_response(result))
 EOF
 ----
 
++
 Two things to notice here:
 +
+--
 * **`virtual_mode=False`** tells the backend to work directly with the real filesystem (required to avoid deprecation warnings)
 * **The system prompt tells the agent its working directory** — without this, the agent may write files to `/tmp` or other locations. The `root_dir` parameter configures the backend, but the agent also needs to know where to work via its prompt.
+--
 
 . Run the agent script:
 +
