@@ -52,19 +52,19 @@ You should see `deepagents-docs` in the list. The next time you start a Claude C
 
 TIP: The `llms.txt` format is a standard way for documentation sites to expose their content to LLMs. It provides a structured, machine-readable index of all documentation pages. Many projects now publish this alongside their regular docs.
 
-== Exercise 2: Create a project AGENTS.md
+== Exercise 2: Create a project CLAUDE.md
 
-Claude Code reads `AGENTS.md` files for project context — the same memory mechanism you learned in Module 8. Create one for your Deep Agents project to give Claude Code the right context.
+Claude Code reads `CLAUDE.md` files for project context and coding standards. This is the primary way to give Claude Code persistent knowledge about your project. Create one that covers both conventions and constraints.
 
-. Create an AGENTS.md in your workshop project root:
+. Create a CLAUDE.md in your workshop project root:
 +
 [source,role="execute"]
 ----
-cat > AGENTS.md << 'EOF'
+cat > CLAUDE.md << 'EOF'
 # Deep Agents Workshop Project
 
 ## Stack
-- Python 3.13+ with uv package manager
+- Python 3.13+ with uv package manager (never pip)
 - deepagents SDK (LangChain + LangGraph)
 - Model: configurable via DEEPAGENTS_MODEL env var
 
@@ -74,6 +74,8 @@ cat > AGENTS.md << 'EOF'
 - FilesystemBackend requires `virtual_mode=False` and a system prompt with the working directory
 - LocalShellBackend for exercises needing shell execution (execute tool)
 - Run scripts with `uv run script.py` (not `python script.py`)
+- Type hints on all function signatures
+- Pydantic V2 for structured data
 
 ## Project Structure
 - `utils.py` — agent_response() helper for multi-provider content format
@@ -89,33 +91,9 @@ EOF
 +
 Now when you ask Claude Code to help with your Deep Agents code, it understands the project conventions without you having to explain them each time.
 
-== Exercise 3: Create a CLAUDE.md for coding standards
+NOTE: Don't confuse `CLAUDE.md` with `AGENTS.md`. `CLAUDE.md` is read by Claude Code (your development tool). `AGENTS.md` is read by Deep Agents at runtime via `MemoryMiddleware` (as you learned in Module 8). They serve different audiences — one is for your dev assistant, the other is for the agents you build.
 
-While `AGENTS.md` provides project context to any agent (including Claude Code), `CLAUDE.md` is Claude Code-specific. Use it for coding standards and preferences.
-
-. Create a CLAUDE.md:
-+
-[source,role="execute"]
-----
-cat > CLAUDE.md << 'EOF'
-# Development Standards
-
-## Python
-- Use uv, never pip
-- Type hints on all function signatures
-- Pydantic V2 for structured data
-- Modern Python 3.13+ patterns
-
-## Deep Agents
-- Always pass virtual_mode=False to FilesystemBackend/LocalShellBackend
-- Always include system_prompt with working directory for filesystem agents
-- Use agent_response() from utils.py for printing results
-- MODEL and FAST_MODEL from environment variables
-- Test with both Anthropic and a remote OpenAI-compatible endpoint
-EOF
-----
-
-== Exercise 4: Claude Code workflows for Deep Agents
+== Exercise 3: Claude Code workflows for Deep Agents
 
 Here are practical workflows for using Claude Code alongside your Deep Agents development.
 
@@ -184,20 +162,20 @@ Create a SKILL.md for a "database-ops" skill that covers:
 Follow the Agent Skills spec format with frontmatter.
 ----
 
-== Exercise 5: The AGENTS.md + Claude Code feedback loop
+== Exercise 4: The CLAUDE.md feedback loop
 
-Here's the most powerful pattern: use Claude Code to improve your agents, then capture what you learn in AGENTS.md so the knowledge compounds.
+Here's the most powerful pattern: use Claude Code to improve your agents, then capture what you learn in `CLAUDE.md` so the knowledge compounds.
 
 . You discover that your agent performs better with a specific system prompt pattern
 . Ask Claude Code to help refine the prompt
-. Once it works, update your project's AGENTS.md with the insight
+. Once it works, update your project's `CLAUDE.md` with the insight
 . Next time you (or Claude Code) work on this project, that knowledge is already there
 
-This is the same self-improving memory pattern from Module 8 — but applied to your development workflow. Your AGENTS.md becomes a living document that captures team knowledge about what works and what doesn't.
+This mirrors the self-improving memory pattern from Module 8 — but applied to your development workflow. Your `CLAUDE.md` becomes a living document that captures team knowledge about what works and what doesn't.
 
 [source]
 ----
-# Add to AGENTS.md after discovering a pattern:
+# Add to CLAUDE.md after discovering a pattern:
 
 ## Lessons Learned
 - Subagent descriptions need action verbs ("Use this to analyze...")
@@ -211,8 +189,7 @@ This is the same self-improving memory pattern from Module 8 — but applied to 
 Claude Code and Deep Agents share the same DNA — system prompts, tools, planning, and memory. Using them together:
 
 * **MCP documentation server** — Claude Code always has the latest Deep Agents API reference
-* **AGENTS.md** — project context that both Claude Code and your agents can read
-* **CLAUDE.md** — coding standards for consistent code generation
+* **CLAUDE.md** — project context and coding standards for consistent development
 * **Development workflows** — scaffolding, debugging, tool writing, prompt iteration
 * **Feedback loop** — discoveries flow into AGENTS.md, compounding project knowledge over time
 
