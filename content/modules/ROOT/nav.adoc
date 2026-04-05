@@ -30,5 +30,6 @@
 * xref:17-bonus-day2-ops.adoc[Day 2: Adding Subagents & Skills on OpenShift]
 * xref:18-bonus-jupyterlab.adoc[JupyterLab — The AI Engineer's Mixing Deck]
 * xref:19-bonus-claude-code.adoc[Developing with Claude Code]
+* xref:21-bonus-mcp.adoc[MCP: Connecting Agents to External Services]
 * xref:20-bonus-security.adoc[Security Considerations]
 * xref:14-bonus-resources.adoc[Resources]

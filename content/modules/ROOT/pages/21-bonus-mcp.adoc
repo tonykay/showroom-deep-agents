@@ -1,0 +1,401 @@
+= Bonus: MCP — Connecting Agents to External Services
+:source-highlighter: rouge
+
+In Module 4, you learned to build custom tools with `@tool` — Python functions that give your agent capabilities. MCP (Model Context Protocol) takes this further: instead of writing tool code yourself, you connect to an MCP server that _provides_ tools as a service.
+
+Think of it as the difference between writing a database driver and connecting to a database. With `@tool`, you write the implementation. With MCP, someone else has already written it — you just connect.
+
+== What you'll learn
+
+* When to use `@tool` vs. MCP servers
+* Build an MCP server with FastMCP (the "service checker" pattern)
+* Connect MCP tools to a Deep Agent using `langchain-mcp-adapters`
+* Combine MCP tools with subagents for specialized integration
+
+== `@tool` vs. MCP: When to use which
+
+[cols="1,2,2",options="header"]
+|===
+|Factor |`@tool` (Python function) |MCP server
+
+|**Best for**
+|Custom business logic specific to your project
+|Reusable integrations that others maintain
+
+|**Code location**
+|Inline in your agent script
+|Separate process (local or remote)
+
+|**Sharing**
+|Copy-paste between projects
+|Connect any agent to the same server
+
+|**Community**
+|You write and maintain it
+|Thousands of pre-built servers on https://github.com/modelcontextprotocol/servers[MCP Hub]
+
+|**Complexity**
+|Simple — one function
+|More setup, but more powerful (resources, prompts, tools)
+|===
+
+**Rule of thumb:** If the tool is specific to your project, use `@tool`. If it's a generic integration (database, API, monitoring), check if an MCP server exists first.
+
+== Exercise 1: Build a Status Checker MCP Server
+
+Let's build an MCP server that checks the status of infrastructure services — the kind of tool an SRE subagent would use. We'll use FastMCP, which makes building MCP servers as simple as writing `@tool` functions.
+
+. Install the dependencies:
++
+[source,role="execute"]
+----
+uv add fastmcp httpx langchain-mcp-adapters
+----
+
+. Create the status checker MCP server:
++
+[source,role="execute"]
+----
+cat > status_server.py << 'EOF'
+import httpx
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("Infrastructure Status Checker")
+
+
+@mcp.tool()
+async def check_service_status(service: str) -> str:
+    """Check the operational status of an infrastructure service.
+
+    Args:
+        service: The service to check. One of: github, aws-s3,
+                 letsencrypt, cloudflare, pypi
+    """
+    # Map service names to their status page URLs
+    status_urls = {
+        "github": "https://www.githubstatus.com/api/v2/status.json",
+        "aws-s3": "https://health.aws.amazon.com/health/status",
+        "letsencrypt": "https://letsencrypt.status.io/1.0/status/55957a99e800baa4470002da",
+        "cloudflare": "https://www.cloudflarestatus.com/api/v2/status.json",
+        "pypi": "https://status.python.org/api/v2/status.json",
+    }
+
+    if service not in status_urls:
+        return f"Unknown service: {service}. Available: {', '.join(status_urls.keys())}"
+
+    url = status_urls[service]
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    # Atlassian Statuspage format (GitHub, Cloudflare, PyPI)
+                    if "status" in data and "indicator" in data["status"]:
+                        indicator = data["status"]["indicator"]
+                        description = data["status"]["description"]
+                        return f"{service}: {indicator.upper()} — {description}"
+                except Exception:
+                    pass
+
+                # If we can't parse, at least report reachable
+                return f"{service}: REACHABLE (HTTP {response.status_code})"
+            else:
+                return f"{service}: WARNING — status page returned HTTP {response.status_code}"
+
+    except httpx.TimeoutException:
+        return f"{service}: UNREACHABLE — connection timed out"
+    except httpx.ConnectError:
+        return f"{service}: UNREACHABLE — connection failed"
+    except Exception as e:
+        return f"{service}: ERROR — {str(e)}"
+
+
+@mcp.tool()
+async def check_all_services() -> str:
+    """Check the status of all monitored infrastructure services at once."""
+    services = ["github", "aws-s3", "letsencrypt", "cloudflare", "pypi"]
+    results = []
+    for service in services:
+        result = await check_service_status(service)
+        results.append(result)
+    return "\n".join(results)
+
+
+@mcp.tool()
+def list_monitored_services() -> str:
+    """List all available services that can be status-checked."""
+    services = {
+        "github": "GitHub — code hosting and CI/CD",
+        "aws-s3": "AWS S3 — object storage",
+        "letsencrypt": "Let's Encrypt — TLS certificate authority",
+        "cloudflare": "Cloudflare — CDN and DNS",
+        "pypi": "PyPI — Python package index",
+    }
+    return "\n".join(f"- {name}: {desc}" for name, desc in services.items())
+
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
+EOF
+----
++
+This is a complete MCP server with three tools:
++
+* `check_service_status` — check one service
+* `check_all_services` — check all services at once
+* `list_monitored_services` — list what's available
++
+The server uses the same `@mcp.tool()` decorator pattern you know from `@tool` — clear docstrings, type hints, and the framework handles the rest.
+
+. Test the server directly to make sure it works:
++
+[source,role="execute"]
+----
+uv run fastmcp run status_server.py --test
+----
+
+== Exercise 2: Connect MCP Tools to a Deep Agent
+
+Now let's connect this MCP server to a Deep Agent. The `langchain-mcp-adapters` package bridges MCP tools into LangChain's tool format.
+
+. Create a script that loads MCP tools and passes them to `create_deep_agent()`:
++
+[source,role="execute"]
+----
+cat > mcp_agent.py << 'EOF'
+import os
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+async def main():
+    # Connect to the MCP server as a subprocess
+    server_params = StdioServerParameters(
+        command="uv",
+        args=["run", os.path.abspath("status_server.py")],
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # Load MCP tools into LangChain format
+            tools = await load_mcp_tools(session)
+            print(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
+
+            # Create a Deep Agent with MCP tools
+            agent = create_deep_agent(model=MODEL, tools=tools)
+
+            result = agent.invoke({"messages": [("user",
+                "Check the status of GitHub and PyPI. "
+                "Are they operational?"
+            )]})
+
+            print(agent_response(result))
+
+
+asyncio.run(main())
+EOF
+----
++
+The key pattern:
++
+. Start the MCP server as a subprocess via `stdio_client`
+. Load its tools with `load_mcp_tools(session)` — this converts MCP tools to LangChain tools
+. Pass them to `create_deep_agent(tools=tools)` — they work alongside the built-in tools
+
+. Run the MCP-powered agent:
++
+[source,role="execute"]
+----
+uv run mcp_agent.py
+----
++
+.Sample output (your results may vary)
+----
+Loaded 3 MCP tools: ['check_service_status', 'check_all_services', 'list_monitored_services']
+
+Both services are operational:
+
+- GitHub: NONE — All Systems Operational
+- PyPI: NONE — All Systems Operational
+
+All clear — no incidents detected.
+----
+
+The agent used the MCP tools to check real service status pages. The tools ran in the MCP server subprocess, and results flowed back through the protocol.
+
+== Exercise 3: MCP Tools + Subagents
+
+The real power is combining MCP tools with the subagent architecture. Let's give our SRE subagent access to the status checker while the main agent orchestrates.
+
+. Create an agent with a status-checking subagent:
++
+[source,role="execute"]
+----
+cat > mcp_subagent.py << 'EOF'
+import os
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+async def main():
+    server_params = StdioServerParameters(
+        command="uv",
+        args=["run", os.path.abspath("status_server.py")],
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            mcp_tools = await load_mcp_tools(session)
+
+            # Define a subagent with MCP tools
+            status_checker = {
+                "name": "sre_status_checker",
+                "description": (
+                    "Use this to check the operational status of infrastructure "
+                    "services like GitHub, AWS S3, Cloudflare, PyPI, and Let's Encrypt. "
+                    "Always use this first when investigating potential outages."
+                ),
+                "system_prompt": (
+                    "You are an SRE status checker. Use your tools to check "
+                    "service status pages and report findings clearly. "
+                    "Flag any service that isn't fully operational."
+                ),
+                "tools": mcp_tools,
+            }
+
+            # Main agent with the status checker as a subagent
+            agent = create_deep_agent(
+                model=MODEL,
+                system_prompt=(
+                    "You are an SRE operations manager. When investigating "
+                    "incidents, always check external service status first by "
+                    "delegating to your sre_status_checker subagent."
+                ),
+                subagents=[status_checker],
+            )
+
+            result = agent.invoke({"messages": [("user",
+                "We're seeing intermittent failures in our CI/CD pipeline. "
+                "Check if GitHub and any of our external dependencies "
+                "(PyPI, Cloudflare) are having issues."
+            )]})
+
+            print(agent_response(result))
+
+
+asyncio.run(main())
+EOF
+----
+
+. Run the subagent-powered status check:
++
+[source,role="execute"]
+----
+uv run mcp_subagent.py
+----
++
+.Sample output (your results may vary)
+----
+I've delegated to the status checker to investigate.
+
+External Service Status Report:
+
+- GitHub: All Systems Operational ✓
+- PyPI: All Systems Operational ✓
+- Cloudflare: All Systems Operational ✓
+
+All external dependencies are operational. The CI/CD pipeline
+failures are likely internal — not caused by upstream outages.
+
+Recommended next steps:
+1. Check recent deployment changes
+2. Review CI runner logs for resource issues
+3. Check internal network connectivity
+----
+
+Notice the pattern: the main agent delegated to `sre_status_checker`, which used the MCP tools to check real service status, then the main agent synthesized the findings into an incident response. This is the same orchestration pattern from the capstone — but with MCP tools instead of custom `@tool` functions.
+
+== Exercise 4: MultiServerMCPClient
+
+For production use with multiple MCP servers, use `MultiServerMCPClient` instead of managing individual connections:
+
+[source,python]
+----
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+async with MultiServerMCPClient({
+    "status": {
+        "command": "uv",
+        "args": ["run", "status_server.py"],
+        "transport": "stdio",
+    },
+    "database": {
+        "url": "http://localhost:8000/mcp",
+        "transport": "http",
+    },
+}) as client:
+    tools = await client.get_tools()
+    agent = create_deep_agent(model=MODEL, tools=tools)
+----
+
+This is particularly useful when your agent needs tools from multiple sources — a status checker, a database connector, a notification service — all managed as separate MCP servers.
+
+== Where to find MCP servers
+
+Before building your own, check if one already exists:
+
+* https://github.com/modelcontextprotocol/servers[MCP Servers Repository] — official collection of reference servers
+* https://github.com/punkpeye/awesome-mcp-servers[Awesome MCP Servers] — community-curated list
+* https://glama.ai/mcp/servers[Glama MCP Directory] — searchable directory with categories
+
+Common MCP servers useful for Deep Agents:
+
+[cols="2,3",options="header"]
+|===
+|Server |Use case
+
+|`@modelcontextprotocol/server-filesystem`
+|Secure file access with configurable permissions
+
+|`@modelcontextprotocol/server-github`
+|GitHub API access (issues, PRs, repos)
+
+|`@modelcontextprotocol/server-postgres`
+|PostgreSQL database queries
+
+|`@modelcontextprotocol/server-slack`
+|Slack messaging and channel management
+
+|`@modelcontextprotocol/server-fetch`
+|Web fetching with robots.txt compliance
+|===
+
+== Module summary
+
+MCP extends your agent's capabilities without writing custom tool code:
+
+* **FastMCP** makes building MCP servers as simple as `@tool` functions
+* **`langchain-mcp-adapters`** bridges MCP tools into the LangChain/Deep Agents ecosystem
+* **MCP + subagents** gives specialized subagents access to specific external services
+* **Community servers** provide pre-built integrations for common services
+* **The status checker pattern** is a practical example of how MCP tools fit into SRE workflows
+
+The key insight: MCP turns external services into tools your agents can call. Instead of writing HTTP clients, parsing responses, and handling errors in `@tool` functions, you connect to an MCP server that handles all of that — and your agent just calls the tools.
