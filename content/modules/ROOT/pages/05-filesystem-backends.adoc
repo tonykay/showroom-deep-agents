@@ -26,9 +26,12 @@ from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
+WORKSPACE = os.path.abspath("./workspace")
+
 agent = create_deep_agent(
     model=MODEL,
-    backend=FilesystemBackend(root_dir="./workspace", virtual_mode=False),
+    system_prompt=f"Your working directory is {WORKSPACE}. All file operations should use paths within this directory.",
+    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
@@ -41,7 +44,10 @@ print(agent_response(result))
 EOF
 ----
 
-Notice the `virtual_mode=False` parameter — this tells the backend to work directly with the real filesystem. Without it, you'll get a deprecation warning. The `root_dir` scopes file operations to the `./workspace` directory.
+Two things to notice here:
++
+* **`virtual_mode=False`** tells the backend to work directly with the real filesystem (required to avoid deprecation warnings)
+* **The system prompt tells the agent its working directory** — without this, the agent may write files to `/tmp` or other locations. The `root_dir` parameter configures the backend, but the agent also needs to know where to work via its prompt.
 
 . Run the agent script:
 +
@@ -94,10 +100,12 @@ from deepagents.backends import FilesystemBackend
 from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+WORKSPACE = os.path.abspath("./workspace")
 
 agent = create_deep_agent(
     model=MODEL,
-    backend=FilesystemBackend(root_dir="./workspace", virtual_mode=False),
+    system_prompt=f"Your working directory is {WORKSPACE}.",
+    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
@@ -154,10 +162,12 @@ from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
-backend = FilesystemBackend(root_dir="./workspace/myproject", virtual_mode=False)
+WORKSPACE = os.path.abspath("./workspace/myproject")
+backend = FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False)
 
 agent = create_deep_agent(
     model=MODEL,
+    system_prompt=f"Your working directory is {WORKSPACE}. All file operations should use paths within this directory.",
     backend=backend,
 )
 
