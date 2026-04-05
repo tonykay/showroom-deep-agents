@@ -120,7 +120,92 @@ Consider adding type hints like `def add(a: int, b: int) -> int:` and a docstrin
 
 Pydantic V2 models give the LLM a rich schema with field descriptions, making it easier for the model to understand how to call your tool correctly with all the right parameters.
 
-== Exercise 3: Tool Design Patterns
+== Exercise 3: Structured Output with Pydantic
+
+You've seen structured _input_ (telling the LLM what to pass to a tool). Now let's get structured _output_ — forcing the agent to return data in a specific Pydantic schema. This is essential when agent responses feed into downstream systems that need predictable formats.
+
+. Create a script that gets a structured code review from the agent:
++
+[source,role="execute"]
+----
+cat > structured_output.py << 'EOF'
+import os
+from pydantic import BaseModel, Field
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+class CodeIssue(BaseModel):
+    severity: str = Field(description="CRITICAL, WARNING, or INFO")
+    line: str = Field(description="Approximate location in the code")
+    issue: str = Field(description="One-sentence description of the problem")
+    fix: str = Field(description="One-sentence suggested fix")
+
+
+class CodeReview(BaseModel):
+    summary: str = Field(description="One-sentence overall assessment")
+    issues: list[CodeIssue] = Field(description="List of issues found")
+    score: int = Field(description="Quality score from 1-10")
+
+
+agent = create_deep_agent(model=MODEL)
+
+# Use with_structured_output to force the response into our schema
+structured_agent = agent | (lambda result: result)  # passthrough for now
+
+# The LangChain way: bind structured output to the model
+from langchain.chat_models import init_chat_model
+
+model = init_chat_model(MODEL)
+structured_model = model.with_structured_output(CodeReview)
+
+code_to_review = """
+def get_user(id):
+    data = eval(open(f"users/{id}.json").read())
+    return data
+"""
+
+review = structured_model.invoke(
+    f"Review this Python code and identify all issues:\n\n{code_to_review}"
+)
+
+# review is now a CodeReview object, not a string
+print(f"Summary: {review.summary}")
+print(f"Score: {review.score}/10")
+print(f"\nIssues ({len(review.issues)}):")
+for issue in review.issues:
+    print(f"  [{issue.severity}] {issue.line}: {issue.issue}")
+    print(f"    Fix: {issue.fix}")
+EOF
+----
+
+. Run it:
++
+[source,role="execute"]
+----
+uv run structured_output.py
+----
++
+.Sample output (your results may vary)
+----
+Summary: Critical security vulnerability with multiple code quality issues
+Score: 2/10
+
+Issues (3):
+  [CRITICAL] eval() call: Using eval() on file contents allows arbitrary code execution
+    Fix: Replace eval() with json.load() for safe JSON parsing
+  [WARNING] open() without context manager: File handle may not be closed properly
+    Fix: Use 'with open(...) as f:' context manager
+  [WARNING] No input validation: The id parameter is used directly in a file path
+    Fix: Validate and sanitize the id parameter before constructing the path
+----
+
+The response is a `CodeReview` Pydantic object, not a string. You can access `review.score`, `review.issues[0].severity`, etc. programmatically. This is how you build agent pipelines where one agent's output feeds into another's input with guaranteed structure.
+
+NOTE: `with_structured_output()` is a LangChain model feature, not a Deep Agents feature. It works on the model directly (`init_chat_model(MODEL).with_structured_output(Schema)`), bypassing the agent's tool loop. Use it when you need guaranteed structured responses — for example, a subagent that returns findings in a specific format for the orchestrator to parse.
+
+== Exercise 4: Tool Design Patterns
 
 Before writing more tools, consider these design patterns that make tools more effective:
 
@@ -152,7 +237,7 @@ Use system prompts for:
 
 Don't create a single "do_everything" tool. Instead, create focused tools that each do one thing well. This makes it easier for the LLM to choose the right tool and for you to maintain the code.
 
-== Exercise 4: Multiple Tools
+== Exercise 5: Multiple Tools
 
 Let's add several tools and observe how the agent routes between them based on user questions.
 
@@ -227,7 +312,7 @@ Answer: The result is 352.
 
 The agent automatically chooses the right tool based on the question and the tool descriptions you provided.
 
-== Exercise 5: Interrupt on Tool Call
+== Exercise 6: Interrupt on Tool Call
 
 For tools with side effects or high costs, you can add human-in-the-loop approval using interrupts.
 
