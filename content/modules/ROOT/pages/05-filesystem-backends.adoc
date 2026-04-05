@@ -152,11 +152,11 @@ NOTE: The `execute` tool runs commands in a subprocess that may not inherit your
 **Sandboxing considerations**: The `execute` tool runs real commands with real side effects. While file operations are scoped to `root_dir`, shell commands via `execute` can access the broader system. Use caution when giving agents shell access, especially with untrusted prompts. For production use, consider a sandboxed backend (Docker container, remote sandbox) instead of `LocalShellBackend`.
 ====
 
-== Exercise 3: FilesystemBackend Root Scoping
+== Exercise 3: Understanding Backend Security Boundaries
 
-Let's explore how `FilesystemBackend` constrains file operations.
+It's important to understand what `root_dir` does and doesn't do. Let's test it.
 
-. Create a script to test backend scoping:
+. Create a script that asks the agent to read a file outside the workspace:
 +
 [source,role="execute"]
 ----
@@ -169,17 +169,15 @@ from utils import agent_response
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
 WORKSPACE = os.path.abspath("./workspace/myproject")
-backend = FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False)
 
 agent = create_deep_agent(
     model=MODEL,
     system_prompt=f"Your working directory is {WORKSPACE}. All file operations should use paths within this directory.",
-    backend=backend,
+    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
-    "List all files in the current directory. "
-    "Then try to read /etc/passwd."
+    "List all files in the current directory."
 )]})
 
 print(agent_response(result))
@@ -195,22 +193,22 @@ uv run scoped_backend.py
 +
 .Sample output (your results may vary)
 ----
-I successfully listed the files in the current directory:
+Here are the files in the current directory:
 - README.md
 - main.py
-
-However, I was unable to read /etc/passwd because the path is outside
-the allowed root directory. The FilesystemBackend enforces path
-boundaries and restricts access to files outside ./workspace/myproject.
 ----
 
-The agent can list files within the scoped directory, but attempting to read `/etc/passwd` will fail. The backend enforces path boundaries, preventing the agent from accessing files outside `root_dir`.
+The agent lists files within the workspace as expected.
 
-This scoping is critical for:
+IMPORTANT: With `virtual_mode=False`, the `root_dir` parameter is a **hint to the agent**, not a hard security boundary. The system prompt tells the agent where to work, and well-behaved models will respect it. However, with `virtual_mode=False` there is no enforcement — the agent _could_ read files outside `root_dir` if it chose to. This is by design for development flexibility.
 
-* **Testing** — contain agent file operations to a test workspace
-* **Security** — prevent accidental or malicious access to sensitive files
-* **Isolation** — keep agent work separate from your real project files
+For stronger isolation, Deep Agents provides:
+
+* **`StateBackend`** — ephemeral in-memory filesystem (no real disk access at all)
+* **`virtual_mode=True`** (coming in deepagents 0.5.0) — enforces path containment within `root_dir`
+* **Container sandboxing** — run the agent in a Docker/Podman container with limited filesystem access (see the deployment modules)
+
+In development, the system prompt approach works well. In production, combine it with container-level isolation for defense in depth.
 
 == Exercise 4: StateBackend (Ephemeral In-Memory)
 
