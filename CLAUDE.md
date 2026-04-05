@@ -140,6 +140,11 @@ Returns a compiled LangGraph `CompiledStateGraph`.
 - Remote OpenAI-compatible endpoints may return content as list of dicts -- `agent_response()` in utils.py handles this
 - deepagents CLI has no `--system-prompt` flag -- custom system prompts are programmatic only
 
+## Global Development Tools
+
+- **Skill**: `~/.claude/skills/deep-agents-dev/SKILL.md` -- enforces all code patterns automatically when working with deepagents code (any project)
+- **MCP Server**: `deepagents-docs` -- serves live docs from `https://docs.langchain.com/llms.txt` (LangChain, LangGraph, Deep Agents API)
+
 ## Style Notes
 
 - Always use Pydantic V2 for structured outputs with OpenAI API
