@@ -220,24 +220,23 @@ In development, the system prompt approach works well. In production, combine it
 
 == Exercise 4: StateBackend (Ephemeral In-Memory)
 
-Sometimes you want the agent to work with files without touching the real filesystem. `StateBackend` stores everything in memory.
+Sometimes you want the agent to work with files without touching the real filesystem. `StateBackend` stores everything in LangGraph's state — ephemeral and in-memory.
 
-. Create a script to test the StateBackend:
+`StateBackend` is actually the **default** backend when you don't pass one to `create_deep_agent()`. It requires a `runtime` argument internally, so you don't instantiate it directly — just omit the `backend` parameter:
+
+. Create a script to test the default StateBackend:
 +
 [source,role="execute"]
 ----
 cat > state_backend.py << 'EOF'
 import os
 from deepagents import create_deep_agent
-from deepagents.backends import StateBackend
 from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
-agent = create_deep_agent(
-    model=MODEL,
-    backend=StateBackend(),
-)
+# No backend parameter = StateBackend (ephemeral, in-memory)
+agent = create_deep_agent(model=MODEL)
 
 result = agent.invoke({"messages": [("user",
     "Create a file called 'notes.txt' with some content. "
@@ -268,7 +267,7 @@ I've successfully created and verified the file:
 The file was successfully created and read, though it only exists in memory.
 ----
 
-The agent successfully created and read the file, but it only exists in the LangGraph state — check your filesystem and you won't find `notes.txt` anywhere.
+The agent successfully created and read the file, but it only exists in the LangGraph state — check your filesystem and you won't find `notes.txt` anywhere. This is the same backend that was silently used in Modules 1-2 when you called `create_deep_agent()` without a `backend` parameter.
 
 `StateBackend` is ideal for:
 

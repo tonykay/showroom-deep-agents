@@ -97,7 +97,7 @@ print(agent_response(result))
 
 - **`FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False)`** -- file operations only (read/write/edit/ls/glob/grep). Always pass absolute path via `os.path.abspath()` and add system prompt: `f"Your working directory is {WORKSPACE}."`
 - **`LocalShellBackend(root_dir=WORKSPACE, virtual_mode=False)`** -- file operations + `execute` tool for shell commands. Required for any exercise needing shell execution.
-- **`StateBackend()`** -- ephemeral in-memory filesystem, no real disk writes
+- **`StateBackend`** -- ephemeral in-memory filesystem, no real disk writes. This is the DEFAULT backend (used when no `backend` parameter is passed). Do NOT instantiate directly (`StateBackend()` fails) -- just omit the `backend` parameter.
 - The `execute` tool subprocess may not inherit user's PATH -- use basic commands (`ls`, `date`, `cat`) or absolute paths
 
 ## Site.yml Notes
