@@ -115,7 +115,8 @@ agent = create_deep_agent(
 
 result = agent.invoke({"messages": [("user",
     "Use your execute tool to run 'ls -la' to show the contents of the current directory, "
-    "then run 'date' to show the current date and time."
+    "then run 'date' to show the current date and time. "
+    "Then find out which python is being used and what version it is."
 )]})
 
 print(agent_response(result))
@@ -133,19 +134,26 @@ uv run execute_tool.py
 ----
 Here are the results:
 
-Current directory contents:
+Directory Contents:
 total 0
-drwxr-xr-x  3 user  staff   96 Apr 04 10:15 .
-drwxr-xr-x  8 user  staff  672 Apr 04 10:10 ..
-drwxr-xr-x  4 user  staff  128 Apr 04 10:12 myproject
+drwxr-xr-x  3 user  staff   96 Apr 05 07:35 .
+drwxr-xr-x  8 user  staff  768 Apr 05 07:37 ..
+drwxr-xr-x  4 user  staff  128 Apr 05 07:35 myproject
 
-Current date and time:
-Fri Apr  4 10:15:30 BST 2026
+Current Date and Time:
+Sun Apr  5 07:38:03 MDT 2026
+
+Python Information:
+- The `python` command is not available (command not found)
+- Python 3.12.8 is available via `python3`
+- Located at /usr/local/bin/python3
 ----
 
-The agent ran real shell commands via the `execute` tool and captured their output. `LocalShellBackend` gives the agent everything `FilesystemBackend` has (file read/write/edit) plus shell execution. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
+The agent ran real shell commands via the `execute` tool and captured their output. `LocalShellBackend` gives the agent everything `FilesystemBackend` has (file read/write/edit) plus shell execution.
 
-NOTE: The `execute` tool runs commands in a subprocess that may not inherit your full shell PATH. Commands like `python` or `uv` might not be found. Use absolute paths (e.g., `/usr/bin/python3`) or simpler commands (`ls`, `date`, `cat`, `echo`) that are available in the default PATH.
+Notice the Python result — the agent discovered that `python` isn't in the subprocess PATH, but `python3` is. This reveals an important characteristic of the `execute` tool: **it runs in a minimal subprocess environment** that doesn't inherit your full shell configuration. The agent adapted by searching for alternatives, which is exactly the kind of problem-solving behavior you want.
+
+NOTE: The `execute` tool's subprocess has a minimal PATH. Commands like `python`, `uv`, or `node` may not be found even though they work in your terminal. The agent can usually figure this out (as it did above), but if you need specific tools, provide absolute paths in your prompt or system prompt.
 
 [WARNING]
 ====
