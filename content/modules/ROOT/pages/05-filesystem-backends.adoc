@@ -90,7 +90,9 @@ This is the filesystem pillar in action. The agent understands how to combine th
 
 == Exercise 2: The Execute Tool
 
-The `execute` tool lets the agent run shell commands. This is powerful but requires care — let's explore it.
+The `execute` tool lets the agent run shell commands. This is powerful but requires a specific backend — `LocalShellBackend` — which extends `FilesystemBackend` with shell execution capabilities.
+
+NOTE: The `execute` tool is only available when using a backend that implements `SandboxBackendProtocol`. The standard `FilesystemBackend` provides file operations only (read, write, edit, ls, glob, grep). To add shell execution, use `LocalShellBackend`.
 
 . Create a script to test the execute tool:
 +
@@ -99,7 +101,7 @@ The `execute` tool lets the agent run shell commands. This is powerful but requi
 cat > execute_tool.py << 'EOF'
 import os
 from deepagents import create_deep_agent
-from deepagents.backends import FilesystemBackend
+from deepagents.backends import LocalShellBackend
 from utils import agent_response
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
@@ -108,7 +110,7 @@ WORKSPACE = os.path.abspath("./workspace")
 agent = create_deep_agent(
     model=MODEL,
     system_prompt=f"Your working directory is {WORKSPACE}.",
-    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
+    backend=LocalShellBackend(root_dir=WORKSPACE),
 )
 
 result = agent.invoke({"messages": [("user",
@@ -131,22 +133,21 @@ uv run execute_tool.py
 ----
 I've checked the installed versions and listed the current directory:
 
-Python version: Python 3.12.2
-uv version: uv 0.1.24
+Python version: Python 3.13.2
+uv version: uv 0.6.14
 
 Current directory contents:
 total 16
-drwxr-xr-x  4 user  staff  128 Mar 30 10:15 .
-drwxr-xr-x  8 user  staff  256 Mar 30 10:10 ..
-drwxr-xr-x  4 user  staff  128 Mar 30 10:12 myproject
--rw-r--r--  1 user  staff  512 Mar 30 10:15 README.md
+drwxr-xr-x  4 user  staff  128 Apr 04 10:15 .
+drwxr-xr-x  8 user  staff  256 Apr 04 10:10 ..
+drwxr-xr-x  4 user  staff  128 Apr 04 10:12 myproject
 ----
 
-The agent ran real shell commands and captured their output. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
+The agent ran real shell commands and captured their output. `LocalShellBackend` gives the agent everything `FilesystemBackend` has (file read/write/edit) plus the `execute` tool for shell commands. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
 
 [WARNING]
 ====
-**Sandboxing considerations**: The `execute` tool runs real commands with real side effects. While `FilesystemBackend` scopes file operations to `root_dir`, execute commands can access the broader system. Use caution when giving agents shell access, especially with untrusted prompts.
+**Sandboxing considerations**: The `execute` tool runs real commands with real side effects. While file operations are scoped to `root_dir`, shell commands via `execute` can access the broader system. Use caution when giving agents shell access, especially with untrusted prompts. For production use, consider a sandboxed backend (Docker container, remote sandbox) instead of `LocalShellBackend`.
 ====
 
 == Exercise 3: FilesystemBackend Root Scoping
