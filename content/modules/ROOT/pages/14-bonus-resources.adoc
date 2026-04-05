@@ -33,7 +33,7 @@ These posts from the LangChain team explain the design decisions and evolution o
 
 == Podcasts & Videos
 
-* https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate[Talk Python: Deep Agents — LangChain's SDK for Agents That Plan and Delegate] — Sydney Runkle (LangChain) discusses the harness architecture, why docstrings power tool schemas, prompt caching at scale, and non-coding applications of deep agents
+* https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate[Talk Python: Deep Agents — LangChain's SDK for Agents That Plan and Delegate] — Sydney Runkle (LangChain) discusses the harness architecture, why docstrings power tool schemas, prompt caching at scale, and non-coding applications of deep agents. The https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate#takeaways-anchor[episode takeaways] are an excellent standalone reference covering all key concepts.
 
 == Observability & Tracing
 
