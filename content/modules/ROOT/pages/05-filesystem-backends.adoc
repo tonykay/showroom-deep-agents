@@ -110,12 +110,12 @@ WORKSPACE = os.path.abspath("./workspace")
 agent = create_deep_agent(
     model=MODEL,
     system_prompt=f"Your working directory is {WORKSPACE}.",
-    backend=LocalShellBackend(root_dir=WORKSPACE),
+    backend=LocalShellBackend(root_dir=WORKSPACE, virtual_mode=False),
 )
 
 result = agent.invoke({"messages": [("user",
-    "Run 'python --version' and 'uv --version' to check what's installed, "
-    "then run 'ls -la' to show the current directory."
+    "Use your execute tool to run 'ls -la' to show the contents of the current directory, "
+    "then run 'date' to show the current date and time."
 )]})
 
 print(agent_response(result))
@@ -131,19 +131,21 @@ uv run execute_tool.py
 +
 .Sample output (your results may vary)
 ----
-I've checked the installed versions and listed the current directory:
-
-Python version: Python 3.13.2
-uv version: uv 0.6.14
+Here are the results:
 
 Current directory contents:
-total 16
-drwxr-xr-x  4 user  staff  128 Apr 04 10:15 .
-drwxr-xr-x  8 user  staff  256 Apr 04 10:10 ..
+total 0
+drwxr-xr-x  3 user  staff   96 Apr 04 10:15 .
+drwxr-xr-x  8 user  staff  672 Apr 04 10:10 ..
 drwxr-xr-x  4 user  staff  128 Apr 04 10:12 myproject
+
+Current date and time:
+Fri Apr  4 10:15:30 BST 2026
 ----
 
-The agent ran real shell commands and captured their output. `LocalShellBackend` gives the agent everything `FilesystemBackend` has (file read/write/edit) plus the `execute` tool for shell commands. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
+The agent ran real shell commands via the `execute` tool and captured their output. `LocalShellBackend` gives the agent everything `FilesystemBackend` has (file read/write/edit) plus shell execution. This enables workflows like running tests, checking dependencies, or inspecting build artifacts.
+
+NOTE: The `execute` tool runs commands in a subprocess that may not inherit your full shell PATH. Commands like `python` or `uv` might not be found. Use absolute paths (e.g., `/usr/bin/python3`) or simpler commands (`ls`, `date`, `cat`, `echo`) that are available in the default PATH.
 
 [WARNING]
 ====
