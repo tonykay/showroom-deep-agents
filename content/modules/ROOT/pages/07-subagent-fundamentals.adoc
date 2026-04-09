@@ -1,7 +1,7 @@
 = Subagent Fundamentals
 :source-highlighter: rouge
 
-You've learned state management and tool building. Now you'll master the third pillar of deep agents: subagents. This is where the framework truly shines—subagents solve the context bloat problem that causes long-running agents to degrade.
+You've learned state management and tool building. Now you'll master the third pillar of deep agents: https://docs.langchain.com/oss/python/deepagents/subagents[subagents]. This is where the framework truly shines—subagents solve the context bloat problem that causes long-running agents to degrade.
 
 == Exercise 1: The Context Bloat Problem
 
@@ -136,17 +136,48 @@ Here are the key differences between REST and GraphQL APIs:
 
 You'll see the main agent delegate to the researcher, which produces a focused, well-organized response.
 
-The subagent is defined as a TypedDict with three required fields:
+The subagent is defined as a dictionary with three required fields (see the https://docs.langchain.com/oss/python/deepagents/subagents#configuration[full configuration reference]):
 
 - `name`: Unique identifier for routing
-- `description`: What the subagent does—this is the primary routing signal
+- `description`: What the subagent does — this is the primary routing signal
 - `system_prompt`: Instructions that define the subagent's behavior
 
-The `subagents` parameter passes them to the main agent, which automatically gets a `task` tool for delegation.
+Optional fields include `tools` (custom tool set), `model` (override the main agent's model), `skills`, and `middleware`. The `subagents` parameter passes them to the main agent, which automatically gets a `task` tool for delegation.
 
 == Exercise 3: The `task` Tool
 
-When you give subagents to a main agent, it receives a `task` tool under the hood. Let's observe it in action.
+When you pass `subagents` to `create_deep_agent()`, the framework automatically adds a https://docs.langchain.com/oss/python/deepagents/subagents[`task` tool] to the main agent's toolkit. This is the mechanism the main agent uses to delegate work — it's a regular tool call, just like `read_file` or `write_file`, but instead of performing a file operation it spins up a subagent.
+
+Here's what happens when the main agent calls `task()`:
+
+[mermaid]
+....
+sequenceDiagram
+    participant User
+    participant Main as Main Agent
+    participant Task as task() tool
+    participant Sub as Subagent
+
+    User->>Main: "Research REST vs GraphQL"
+    Main->>Main: Reads subagent descriptions
+    Main->>Task: task(subagent_type="researcher", description="...")
+    Task->>Sub: Creates fresh agent with system_prompt
+    Sub->>Sub: Works in isolated context
+    Sub-->>Task: Returns result as string
+    Task-->>Main: Result arrives as ToolMessage
+    Main->>User: Integrates result into final response
+....
+
+The key insight is that the subagent's entire lifecycle — creation, execution, and cleanup — happens inside a single tool call. The main agent sees only the final result as a `ToolMessage`, not the subagent's intermediate reasoning or tool calls. This is what keeps the main agent's context clean.
+
+The `task` tool takes two arguments:
+
+- `subagent_type`: Which subagent to invoke (matches the subagent's `name` field)
+- `description`: A natural-language description of what the subagent should do
+
+The main agent decides _which_ subagent to call by reading the `description` fields you provided when defining them. It decides _what_ to ask by formulating the `description` argument based on the user's request.
+
+Let's observe this in action.
 
 . Create a delegation inspector:
 +
@@ -248,12 +279,7 @@ Delegated to: researcher
 Task description: Research the key differences between REST and GraphQL APIs, focusing on their architec...
 ----
 
-The `task` tool takes two arguments:
-
-- `subagent_type`: Which subagent to invoke (matches `name`)
-- `description`: The task to execute
-
-The subagent runs in its own context, returns the result as tool output, and the main agent integrates it into its reasoning.
+Notice how the main agent formulated the `description` — it didn't just pass through the user's message verbatim. The main agent reasons about what information the subagent needs and crafts a focused task description.
 
 == Exercise 4: Subagent Descriptions as Routing
 
