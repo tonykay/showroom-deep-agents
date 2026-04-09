@@ -54,6 +54,10 @@ Use memory for context that should influence every interaction: coding standards
 
 . Create a script to configure an agent with memory and observe how it uses the context:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_memory.py << 'EOF'
@@ -75,6 +79,29 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    memory=["./AGENTS.md"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "What coding standards should I follow in this project?"
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +
@@ -100,6 +127,10 @@ Agents can modify their own AGENTS.md to learn and persist knowledge across conv
 
 . Create a script to ask the agent to update its own AGENTS.md:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > update_memory.py << 'EOF'
@@ -122,6 +153,30 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    memory=["./AGENTS.md"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "I just decided we should also use Pydantic V2 for all data validation. "
+    "Update the project's AGENTS.md to include this coding standard."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +
@@ -195,6 +250,10 @@ EOF
 
 . Create a script to load memory from multiple sources — project-level and user-level:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > layered_memory.py << 'EOF'
@@ -216,6 +275,29 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    memory=["./AGENTS.md", "~/.deepagents/AGENTS.md"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "How should I install dependencies for this project?"
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +
@@ -259,6 +341,10 @@ Memory sits near the bottom of the stack because it shapes the system prompt tha
 
 . Create a script to combine all three patterns — memory, skills, and subagents — to build a fully-equipped agent:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > full_stack.py << 'EOF'
@@ -294,6 +380,43 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
+
+subagents = [
+    {
+        "name": "researcher",
+        "description": "Research topics and gather information.",
+        "system_prompt": "You are a research assistant.",
+        "model": FAST_MODEL,
+    }
+]
+
+agent = create_deep_agent(
+    model=MODEL,
+    memory=["./AGENTS.md"],
+    skills=["./skills/"],
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the latest FastAPI best practices for async database operations, "
+    "then review our authentication.py file against those best practices. "
+    "Make sure your review follows our project's coding standards."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +
@@ -342,6 +465,10 @@ export OPENAI_API_KEY=your-key-here
 
 . Create a script to use different model providers for different subagents:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > multi_provider.py << 'EOF'
@@ -379,6 +506,45 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+subagents = [
+    {
+        "name": "researcher",
+        "description": "Research topics using web search.",
+        "system_prompt": "You are a research assistant.",
+        "model": "openai:gpt-4o",
+    },
+    {
+        "name": "analyst",
+        "description": "Deep analysis requiring careful reasoning.",
+        "system_prompt": "You are an analytical expert.",
+        "model": MODEL,
+    },
+]
+
+agent = create_deep_agent(
+    model=MODEL,
+    memory=["./AGENTS.md"],
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the top 3 Python async frameworks and have the analyst compare them."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +

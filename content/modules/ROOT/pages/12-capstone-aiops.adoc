@@ -505,6 +505,10 @@ Now create the custom tools and the loader function that wires everything togeth
 
 . Create the custom tools:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > aiops/tools.py << 'EOF'
@@ -558,7 +562,65 @@ def query_metrics(service: str, metric: str) -> str:
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+from langchain_core.tools import tool
+
+@tool
+def execute_remediation(action: str, target: str) -> str:
+    """Execute a remediation action on a target system.
+
+    REQUIRES HUMAN APPROVAL via interrupt mechanism.
+
+    Args:
+        action: The remediation action (e.g., 'restart', 'rollback_deployment')
+        target: The target service or component
+    """
+    return f"[SIMULATED] Executed '{action}' on '{target}' — success"
+
+@tool
+def fetch_logs(service: str, minutes: int = 30) -> str:
+    """Fetch recent logs from a service.
+
+    Args:
+        service: The service name
+        minutes: How many minutes of logs to retrieve
+    """
+    return f"""[{service}] 2026-03-30T14:22:01Z ERROR Connection pool exhausted - max connections (100) reached
+[{service}] 2026-03-30T14:22:03Z WARN Request queued - no available connections
+[{service}] 2026-03-30T14:22:05Z ERROR Timeout waiting for database connection (30s)
+[{service}] 2026-03-30T14:22:08Z ERROR 503 Service Unavailable returned to client
+[{service}] 2026-03-30T14:22:10Z WARN Connection pool health check failed
+[{service}] 2026-03-30T14:22:15Z ERROR OOM Kill: container memory limit (512Mi) exceeded
+[{service}] 2026-03-30T14:22:18Z INFO Service restarted by orchestrator
+[{service}] 2026-03-30T14:22:20Z WARN Connection pool re-initializing (0/100 connections)
+[{service}] 2026-03-30T14:22:25Z ERROR Connection pool exhausted again after restart"""
+
+@tool
+def query_metrics(service: str, metric: str) -> str:
+    """Query monitoring metrics for a service.
+
+    Args:
+        service: The service name
+        metric: The metric to query (cpu, memory, connections, error_rate)
+    """
+    metrics = {
+        "cpu": f"{service} CPU: 45% (normal: 20-30%)",
+        "memory": f"{service} Memory: 498Mi / 512Mi (97% - CRITICAL)",
+        "connections": f"{service} DB Connections: 100/100 (EXHAUSTED)",
+        "error_rate": f"{service} Error Rate: 23% (normal: <1%)",
+    }
+    return metrics.get(metric, f"Unknown metric: {metric}")
+----
+====
+
 . Create the loader that handles both tools and skills:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -608,6 +670,56 @@ def load_subagents(config_path: Path) -> list:
     return subagents
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import yaml
+from pathlib import Path
+from tools import execute_remediation, fetch_logs, query_metrics
+
+def load_subagents(config_path: Path) -> list:
+    """Load subagent definitions from a YAML file.
+
+    Maps tool name strings to actual tool objects and resolves
+    skill paths. This is a custom utility for config-driven design.
+    """
+    # Registry of available tools
+    available_tools = {
+        "execute_remediation": execute_remediation,
+        "fetch_logs": fetch_logs,
+        "query_metrics": query_metrics,
+    }
+
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    subagents = []
+    for name, spec in config.items():
+        subagent = {
+            "name": name,
+            "description": spec["description"],
+            "model": spec["model"],
+            "system_prompt": spec["system_prompt"],
+        }
+
+        # Map tool names to tool objects
+        if "tools" in spec:
+            subagent["tools"] = [
+                available_tools[tool_name]
+                for tool_name in spec["tools"]
+            ]
+
+        # Pass through skill paths
+        if "skills" in spec:
+            subagent["skills"] = spec["skills"]
+
+        subagents.append(subagent)
+
+    return subagents
+----
+====
 
 This loader extends the pattern from Module 6 to handle skills. When it encounters a `skills` key in the YAML, it passes the paths through to the subagent definition. The deepagents framework will discover and load the SKILL.md files from those directories.
 
@@ -699,6 +811,10 @@ Now create the main agent with interrupt controls. The `interrupt_on` parameter 
 
 . Create the main agent with interrupt controls:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > aiops/agent.py << 'EOF'
@@ -761,6 +877,70 @@ if __name__ == "__main__":
     print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from pathlib import Path
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+from loader import load_subagents
+from tools import execute_remediation, fetch_logs, query_metrics
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Create the ops_manager orchestrator
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt="""You are an AIOps operations manager coordinating incident response.
+
+## Your Process
+
+When an incident is reported:
+
+1. **Analyze**: Delegate to sre_log_analyst to examine logs and metrics
+2. **Diagnose**: Send findings to sre_diagnostician for root cause analysis
+3. **Remediate**: If needed, delegate to sre_remediator with approval gate
+4. **Report**: Compile a final incident report with timeline and actions
+
+## Delegation Strategy
+
+- Use clear, specific task descriptions when delegating
+- Provide context from previous steps to each subagent
+- Coordinate the handoffs between specialists
+- Ensure human approval for any remediation actions
+
+## Incident Report Format
+
+Your final output should include:
+- Incident summary (what happened, when, impact)
+- Timeline of investigation and actions
+- Root cause analysis
+- Remediation actions taken
+- Follow-up recommendations""",
+    memory=["./aiops/AGENTS.md"],
+    skills=["./aiops/skills/"],
+    subagents=load_subagents(Path("aiops/subagents.yaml")),
+    tools=[fetch_logs, query_metrics, execute_remediation],
+    interrupt_on={"execute_remediation": True},
+    backend=FilesystemBackend(root_dir="./aiops", virtual_mode=False),
+)
+
+if __name__ == "__main__":
+    # Test with a realistic incident
+    result = agent.invoke({"messages": [("user",
+        "INCIDENT ALERT: Service 'payment-api' is returning 503 errors. "
+        "Error rate spiked from <1% to 23% in the last 10 minutes. "
+        "Multiple customers reporting failed transactions. "
+        "Investigate and propose remediation."
+    )]})
+
+    print(agent_response(result))
+----
+====
 
 The `interrupt_on` parameter is the key to human-in-the-loop control. When `execute_remediation` is called, the agent pauses and returns control to you. You can review the proposed action, approve it, or reject it. This prevents automated systems from making destructive changes without oversight.
 

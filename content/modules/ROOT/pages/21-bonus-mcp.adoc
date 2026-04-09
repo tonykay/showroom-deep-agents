@@ -54,6 +54,10 @@ uv add fastmcp httpx langchain-mcp-adapters
 
 . Create the status checker MCP server:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > status_server.py << 'EOF'
@@ -141,6 +145,95 @@ if __name__ == "__main__":
     mcp.run(transport="stdio")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import httpx
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("Infrastructure Status Checker")
+
+
+@mcp.tool()
+async def check_service_status(service: str) -> str:
+    """Check the operational status of an infrastructure service.
+
+    Args:
+        service: The service to check. One of: github, aws-s3,
+                 letsencrypt, cloudflare, pypi
+    """
+    # Map service names to their status page URLs
+    status_urls = {
+        "github": "https://www.githubstatus.com/api/v2/status.json",
+        "aws-s3": "https://health.aws.amazon.com/health/status",
+        "letsencrypt": "https://letsencrypt.status.io/1.0/status/55957a99e800baa4470002da",
+        "cloudflare": "https://www.cloudflarestatus.com/api/v2/status.json",
+        "pypi": "https://status.python.org/api/v2/status.json",
+    }
+
+    if service not in status_urls:
+        return f"Unknown service: {service}. Available: {', '.join(status_urls.keys())}"
+
+    url = status_urls[service]
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    # Atlassian Statuspage format (GitHub, Cloudflare, PyPI)
+                    if "status" in data and "indicator" in data["status"]:
+                        indicator = data["status"]["indicator"]
+                        description = data["status"]["description"]
+                        return f"{service}: {indicator.upper()} — {description}"
+                except Exception:
+                    pass
+
+                # If we can't parse, at least report reachable
+                return f"{service}: REACHABLE (HTTP {response.status_code})"
+            else:
+                return f"{service}: WARNING — status page returned HTTP {response.status_code}"
+
+    except httpx.TimeoutException:
+        return f"{service}: UNREACHABLE — connection timed out"
+    except httpx.ConnectError:
+        return f"{service}: UNREACHABLE — connection failed"
+    except Exception as e:
+        return f"{service}: ERROR — {str(e)}"
+
+
+@mcp.tool()
+async def check_all_services() -> str:
+    """Check the status of all monitored infrastructure services at once."""
+    services = ["github", "aws-s3", "letsencrypt", "cloudflare", "pypi"]
+    results = []
+    for service in services:
+        result = await check_service_status(service)
+        results.append(result)
+    return "\n".join(results)
+
+
+@mcp.tool()
+def list_monitored_services() -> str:
+    """List all available services that can be status-checked."""
+    services = {
+        "github": "GitHub — code hosting and CI/CD",
+        "aws-s3": "AWS S3 — object storage",
+        "letsencrypt": "Let's Encrypt — TLS certificate authority",
+        "cloudflare": "Cloudflare — CDN and DNS",
+        "pypi": "PyPI — Python package index",
+    }
+    return "\n".join(f"- {name}: {desc}" for name, desc in services.items())
+
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
+----
+====
 +
 This is a complete MCP server with three tools:
 +
@@ -162,6 +255,10 @@ uv run fastmcp run status_server.py --test
 Now let's connect this MCP server to a Deep Agent. The `langchain-mcp-adapters` package bridges MCP tools into LangChain's tool format.
 
 . Create a script that loads MCP tools and passes them to `create_deep_agent()`:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -206,6 +303,51 @@ async def main():
 asyncio.run(main())
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+async def main():
+    # Connect to the MCP server as a subprocess
+    server_params = StdioServerParameters(
+        command="uv",
+        args=["run", os.path.abspath("status_server.py")],
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # Load MCP tools into LangChain format
+            tools = await load_mcp_tools(session)
+            print(f"Loaded {len(tools)} MCP tools: {[t.name for t in tools]}")
+
+            # Create a Deep Agent with MCP tools
+            agent = create_deep_agent(model=MODEL, tools=tools)
+
+            result = agent.invoke({"messages": [("user",
+                "Check the status of GitHub and PyPI. "
+                "Are they operational?"
+            )]})
+
+            print(agent_response(result))
+
+
+asyncio.run(main())
+----
+====
 +
 The key pattern:
 +
@@ -239,6 +381,10 @@ The agent used the MCP tools to check real service status pages. The tools ran i
 The real power is combining MCP tools with the subagent architecture. Let's give our SRE subagent access to the status checker while the main agent orchestrates.
 
 . Create an agent with a status-checking subagent:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -304,6 +450,72 @@ async def main():
 asyncio.run(main())
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+async def main():
+    server_params = StdioServerParameters(
+        command="uv",
+        args=["run", os.path.abspath("status_server.py")],
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            mcp_tools = await load_mcp_tools(session)
+
+            # Define a subagent with MCP tools
+            status_checker = {
+                "name": "sre_status_checker",
+                "description": (
+                    "Use this to check the operational status of infrastructure "
+                    "services like GitHub, AWS S3, Cloudflare, PyPI, and Let's Encrypt. "
+                    "Always use this first when investigating potential outages."
+                ),
+                "system_prompt": (
+                    "You are an SRE status checker. Use your tools to check "
+                    "service status pages and report findings clearly. "
+                    "Flag any service that isn't fully operational."
+                ),
+                "tools": mcp_tools,
+            }
+
+            # Main agent with the status checker as a subagent
+            agent = create_deep_agent(
+                model=MODEL,
+                system_prompt=(
+                    "You are an SRE operations manager. When investigating "
+                    "incidents, always check external service status first by "
+                    "delegating to your sre_status_checker subagent."
+                ),
+                subagents=[status_checker],
+            )
+
+            result = agent.invoke({"messages": [("user",
+                "We're seeing intermittent failures in our CI/CD pipeline. "
+                "Check if GitHub and any of our external dependencies "
+                "(PyPI, Cloudflare) are having issues."
+            )]})
+
+            print(agent_response(result))
+
+
+asyncio.run(main())
+----
+====
 
 . Run the subagent-powered status check:
 +

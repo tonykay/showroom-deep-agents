@@ -113,6 +113,10 @@ Observe progressive disclosure in action.
 
 . Try two different requests:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_skill_invocation.py << 'EOF'
@@ -132,6 +136,34 @@ response = agent.run("Review the authentication.py file for security issues")
 # Request 2: Unrelated request
 response = agent.run("What's 15 * 23?")
 EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    skills=["./skills/"],
+)
+
+# Request 1: Triggers the code-review skill
+response = agent.run("Review the authentication.py file for security issues")
+
+# Request 2: Unrelated request
+response = agent.run("What's 15 * 23?")
+----
+====
++
+. Run the script:
++
+[source,role="execute"]
+----
 uv run test_skill_invocation.py
 ----
 +
@@ -166,6 +198,10 @@ Equip a subagent with its own skills. Skills on subagents are isolated — the m
 
 . Create an agent with a subagent that has its own skills:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_subagent_skills.py << 'EOF'
@@ -189,6 +225,38 @@ agent = create_deep_agent(
 response = agent.run("Please review authentication.py")
 print(response)
 EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+reviewer_subagent = {
+    "name": "code-reviewer",
+    "description": "Reviews code for quality, security, and style issues.",
+    "system_prompt": "You are a code review specialist.",
+    "skills": ["./skills/"],
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[reviewer_subagent],
+)
+
+response = agent.run("Please review authentication.py")
+print(response)
+----
+====
++
+. Run the script:
++
+[source,role="execute"]
+----
 uv run test_subagent_skills.py
 ----
 +
@@ -247,6 +315,10 @@ EOF
 
 . Register both skill sources (last one wins):
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_skill_layering.py << 'EOF'
@@ -263,6 +335,31 @@ agent = create_deep_agent(
 response = agent.run("Review the authentication.py file")
 print(response)
 EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    skills=["./skills/", "./skills-override/"],
+)
+
+response = agent.run("Review the authentication.py file")
+print(response)
+----
+====
++
+. Run the script:
++
+[source,role="execute"]
+----
 uv run test_skill_layering.py
 ----
 +
@@ -309,6 +406,10 @@ EOF
 
 . Test the delegation workflow:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_skill_delegation.py << 'EOF'
@@ -325,6 +426,31 @@ agent = create_deep_agent(
 response = agent.run("Write a summary about progressive disclosure in AI agents")
 print(response)
 EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    skills=["./skills/"],
+)
+
+response = agent.run("Write a summary about progressive disclosure in AI agents")
+print(response)
+----
+====
++
+. Run the script:
++
+[source,role="execute"]
+----
 uv run test_skill_delegation.py
 ----
 +

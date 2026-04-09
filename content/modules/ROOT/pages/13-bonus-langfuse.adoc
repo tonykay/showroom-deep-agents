@@ -67,6 +67,10 @@ Adding tracing to a Deep Agent takes two lines — import the callback handler a
 
 . Create a traced agent script:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > traced_agent.py << 'EOF'
@@ -99,6 +103,39 @@ print("\nTrace sent to LangFuse!")
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Initialize LangFuse tracing
+langfuse_handler = CallbackHandler(
+    session_id="workshop-tracing",
+    tags=["deep-agents-workshop"],
+)
+
+agent = create_deep_agent(model=MODEL)
+
+# Pass the handler via config — LangGraph forwards it to all LLM calls
+result = agent.invoke(
+    {"messages": [("user", "What tools do you have? List them briefly.")]},
+    config={"callbacks": [langfuse_handler]},
+)
+
+print(agent_response(result))
+
+# Flush to ensure all traces are sent
+langfuse_handler.langfuse.flush()
+print("\nTrace sent to LangFuse!")
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -127,6 +164,10 @@ Trace sent to LangFuse!
 The real power of tracing shows when subagents are involved. Each delegation appears as a nested span in the trace.
 
 . Create a multi-agent traced script:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -168,6 +209,47 @@ print("\nTrace sent to LangFuse!")
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+langfuse_handler = CallbackHandler(
+    session_id="workshop-subagent-tracing",
+    tags=["deep-agents-workshop", "subagents"],
+)
+
+researcher = {
+    "name": "researcher",
+    "description": "Research topics and provide concise summaries.",
+    "system_prompt": "You are a research assistant. Be concise.",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[researcher],
+)
+
+result = agent.invoke(
+    {"messages": [("user",
+        "Use your researcher subagent to find out what the four pillars "
+        "of Deep Agents are. Keep it brief."
+    )]},
+    config={"callbacks": [langfuse_handler]},
+)
+
+print(agent_response(result))
+langfuse_handler.langfuse.flush()
+print("\nTrace sent to LangFuse!")
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -190,6 +272,10 @@ This hierarchical view is invaluable for debugging multi-agent workflows — you
 Tracing works with streaming too — just pass the callback in the config.
 
 . Create a streaming traced script:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -230,6 +316,47 @@ langfuse_handler.langfuse.flush()
 print("Trace sent to LangFuse!")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from langfuse.langchain import CallbackHandler
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+langfuse_handler = CallbackHandler(
+    session_id="workshop-streaming-tracing",
+    tags=["deep-agents-workshop", "streaming"],
+)
+
+agent = create_deep_agent(model=MODEL)
+
+for event in agent.stream(
+    {"messages": [("user", "Write a haiku about observability")]},
+    config={"callbacks": [langfuse_handler]},
+):
+    for value in event.values():
+        if not isinstance(value, dict):
+            continue
+        messages = value.get("messages")
+        if messages is None:
+            continue
+        if hasattr(messages, 'value'):
+            messages = messages.value
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg in messages:
+            if hasattr(msg, 'content') and msg.content:
+                print(msg.content, end="", flush=True)
+
+print()
+langfuse_handler.langfuse.flush()
+print("Trace sent to LangFuse!")
+----
+====
 
 . Run it:
 +
