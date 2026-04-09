@@ -9,6 +9,10 @@ Let's create an agent with a specific persona — a senior Python code reviewer.
 
 . Create the review agent script:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > review_agent.py << 'EOF'
@@ -40,6 +44,39 @@ def get_user(id):
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt="""You are a senior Python code reviewer.
+When reviewing code, always check for:
+1. Type safety and proper type hints
+2. Error handling
+3. Security vulnerabilities
+4. Performance considerations
+
+Be direct and specific in your feedback.""",
+)
+
+result = agent.invoke({"messages": [("user", """Review this code:
+
+def get_user(id):
+    data = eval(open(f"users/{id}.json").read())
+    return data
+""")]})
+
+print(agent_response(result))
+----
+====
 
 . Run the review agent:
 +
@@ -78,6 +115,10 @@ Let's explore what `BASE_AGENT_PROMPT` actually contains.
 
 . Create a script to inspect the base prompt:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > inspect_prompt.py << 'EOF'
@@ -87,6 +128,17 @@ print(BASE_AGENT_PROMPT[:2000])
 print(f"\n... ({len(BASE_AGENT_PROMPT)} total characters)")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+from deepagents.graph import BASE_AGENT_PROMPT
+
+print(BASE_AGENT_PROMPT[:2000])
+print(f"\n... ({len(BASE_AGENT_PROMPT)} total characters)")
+----
+====
 
 . Run the inspection script:
 +
@@ -140,6 +192,10 @@ For complex multi-step tasks, Deep Agents can plan out the work before executing
 
 . Create the planning agent script:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > planning_agent.py << 'EOF'
@@ -171,6 +227,38 @@ print(agent_response(result))
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(model=MODEL)
+
+result = agent.invoke({"messages": [("user",
+    "Create a Python project structure for a REST API with "
+    "user authentication, database models, and tests. "
+    "Plan out the work first, then create the files."
+)]})
+
+# Show planning tool calls
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls'):
+        for tc in msg.tool_calls:
+            if tc['name'] == 'write_todos':
+                print("Planning step detected!")
+                print(f"Todos: {tc['args']}")
+
+# Show the final response
+print("\n=== Agent Response ===")
+print(agent_response(result))
+----
+====
+
 . Run the planning agent:
 +
 [source,role="execute"]
@@ -198,6 +286,10 @@ The `write_todos` tool is provided by `TodoListMiddleware` — a context enginee
 You can use system prompts to influence how the agent plans.
 
 . Create the guided planning script:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -235,6 +327,44 @@ print("\n=== Agent Response ===")
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt="""Before starting any task:
+1. Always create a todo list with write_todos
+2. Break work into steps of no more than 3 files each
+3. Complete and check off each step before moving to the next
+4. Never skip the planning phase""",
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a Python project structure for a REST API with "
+    "user authentication, database models, and tests."
+)]})
+
+# Show planning tool calls
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls'):
+        for tc in msg.tool_calls:
+            if tc['name'] == 'write_todos':
+                print("Planning step detected!")
+                print(f"Todos: {tc['args']}")
+
+# Show the final response
+print("\n=== Agent Response ===")
+print(agent_response(result))
+----
+====
 
 . Run the guided planning agent:
 +

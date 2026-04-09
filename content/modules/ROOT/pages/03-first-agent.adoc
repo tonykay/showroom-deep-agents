@@ -220,6 +220,10 @@ Let's switch to streaming mode, and write a haiku about Python.
 
 . Create a new file:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > streaming_agent.py << 'EOF'
@@ -249,6 +253,36 @@ print()
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(model=MODEL)
+
+for event in agent.stream({"messages": [("user", "Write a haiku about Python programming")]}):
+    for value in event.values():
+        if not isinstance(value, dict):
+            continue
+        messages = value.get("messages")
+        if messages is None:
+            continue
+        # LangGraph may wrap messages in an Overwrite object
+        if hasattr(messages, 'value'):
+            messages = messages.value
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg in messages:
+            if hasattr(msg, 'content') and msg.content:
+                print(msg.content, end="", flush=True)
+print()
+----
+====
+
 . Run the streaming agent:
 +
 [source,role="execute"]
@@ -274,6 +308,10 @@ Let's take a closer look at those built-in tools.
 
 . Create another script that asks the agent to describe its capabilities:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > explore_tools.py << 'EOF'
@@ -298,6 +336,32 @@ content = re.sub(r'`([^`]+)`', r'\1', content)         # Remove code ticks
 print(content)
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+import re
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+agent = create_deep_agent(model=MODEL)
+
+result = agent.invoke({"messages": [("user",
+    "List your tools. For each tool give the name and a one-line description. "
+    "Use plain text, one tool per line, format: tool_name - description"
+)]})
+
+# Clean up any markdown formatting for terminal display
+content = agent_response(result)
+content = re.sub(r'\*\*([^*]+)\*\*', r'\1', content)  # Remove bold
+content = re.sub(r'`([^`]+)`', r'\1', content)         # Remove code ticks
+print(content)
+----
+====
 
 . Run the script to see the full toolbox:
 +
