@@ -16,6 +16,10 @@ mkdir -p workspace
 
 . Create an agent that uses the filesystem backend:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > file_tools.py << 'EOF'
@@ -43,6 +47,35 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+WORKSPACE = os.path.abspath("./workspace")
+
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt=f"Your working directory is {WORKSPACE}. All file operations should use paths within this directory.",
+    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a directory called 'myproject' with a README.md and a main.py file. "
+    "The README should describe the project. The main.py should have a hello world function. "
+    "Then list the files you created and read back the README to verify it."
+)]})
+
+print(agent_response(result))
+----
+====
 
 +
 Two things to notice here:
@@ -96,6 +129,10 @@ NOTE: The `execute` tool is only available when using a backend that implements 
 
 . Create a script to test the execute tool:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > execute_tool.py << 'EOF'
@@ -122,6 +159,34 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from deepagents.backends import LocalShellBackend
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+WORKSPACE = os.path.abspath("./workspace")
+
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt=f"Your working directory is {WORKSPACE}.",
+    backend=LocalShellBackend(root_dir=WORKSPACE, virtual_mode=False),
+)
+
+result = agent.invoke({"messages": [("user",
+    "Use your execute tool to run 'ls -la' to show the contents of the current directory, "
+    "then run 'date' to show the current date and time. "
+    "Then find out which python is being used and what version it is."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the script:
 +
@@ -166,6 +231,10 @@ It's important to understand what `root_dir` does and doesn't do. Let's test it.
 
 . Create a script that asks the agent to read a file outside the workspace:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > scoped_backend.py << 'EOF'
@@ -191,6 +260,33 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+WORKSPACE = os.path.abspath("./workspace/myproject")
+
+agent = create_deep_agent(
+    model=MODEL,
+    system_prompt=f"Your working directory is {WORKSPACE}. All file operations should use paths within this directory.",
+    backend=FilesystemBackend(root_dir=WORKSPACE, virtual_mode=False),
+)
+
+result = agent.invoke({"messages": [("user",
+    "List all files in the current directory."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the scoped backend test:
 +
@@ -226,6 +322,10 @@ Sometimes you want the agent to work with files without touching the real filesy
 
 . Create a script to test the default StateBackend:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > state_backend.py << 'EOF'
@@ -246,6 +346,28 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# No backend parameter = StateBackend (ephemeral, in-memory)
+agent = create_deep_agent(model=MODEL)
+
+result = agent.invoke({"messages": [("user",
+    "Create a file called 'notes.txt' with some content. "
+    "Then read it back to verify."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the StateBackend test:
 +

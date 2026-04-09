@@ -9,6 +9,10 @@ The `@tool` decorator from `langchain_core` makes it easy to turn any Python fun
 
 . Create a simple word-counting tool:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > simple_tool.py << 'EOF'
@@ -38,6 +42,36 @@ print(agent_response(result))
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+agent = create_deep_agent(
+    model=MODEL,
+    tools=[word_count],
+)
+
+result = agent.invoke({"messages": [("user",
+    "How many words are in this sentence: "
+    "'The quick brown fox jumps over the lazy dog'"
+)]})
+
+print(agent_response(result))
+----
+====
+
 . Run it to see the agent use your custom tool:
 +
 [source,role="execute"]
@@ -59,6 +93,10 @@ IMPORTANT: **Your docstring IS your schema.** The `@tool` decorator uses Pydanti
 For more complex tools, you can use Pydantic V2 models to define structured input schemas with rich field descriptions.
 
 . Create a code analysis tool with multiple parameters:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -101,6 +139,48 @@ print(agent_response(result))
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from pydantic import BaseModel, Field
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+class CodeAnalysisInput(BaseModel):
+    code: str = Field(description="The Python code to analyze")
+    check_types: bool = Field(default=True, description="Whether to check for type hints")
+    check_docstrings: bool = Field(default=True, description="Whether to check for docstrings")
+
+@tool(args_schema=CodeAnalysisInput)
+def analyze_code(code: str, check_types: bool = True, check_docstrings: bool = True) -> str:
+    """Analyze Python code for quality issues like missing type hints and docstrings."""
+    issues = []
+    if check_types and "->" not in code and ":" not in code:
+        issues.append("No type hints found")
+    if check_docstrings and '"""' not in code and "'''" not in code:
+        issues.append("No docstrings found")
+    if not issues:
+        return "Code looks good!"
+    return "Issues found: " + ", ".join(issues)
+
+agent = create_deep_agent(
+    model=MODEL,
+    tools=[analyze_code],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Analyze this code: def add(a, b): return a + b"
+)]})
+
+print(agent_response(result))
+----
+====
+
 . Run it to see structured input in action:
 +
 [source,role="execute"]
@@ -125,6 +205,10 @@ Pydantic V2 models give the LLM a rich schema with field descriptions, making it
 You've seen structured _input_ (telling the LLM what to pass to a tool). Now let's get structured _output_ — forcing the agent to return data in a specific Pydantic schema. This is essential when agent responses feed into downstream systems that need predictable formats.
 
 . Create a script that gets a structured code review from the agent:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -179,6 +263,61 @@ for issue in review.issues:
     print(f"    Fix: {issue.fix}")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from pydantic import BaseModel, Field
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+
+class CodeIssue(BaseModel):
+    severity: str = Field(description="CRITICAL, WARNING, or INFO")
+    line: str = Field(description="Approximate location in the code")
+    issue: str = Field(description="One-sentence description of the problem")
+    fix: str = Field(description="One-sentence suggested fix")
+
+
+class CodeReview(BaseModel):
+    summary: str = Field(description="One-sentence overall assessment")
+    issues: list[CodeIssue] = Field(description="List of issues found")
+    score: int = Field(description="Quality score from 1-10")
+
+
+agent = create_deep_agent(model=MODEL)
+
+# Use with_structured_output to force the response into our schema
+structured_agent = agent | (lambda result: result)  # passthrough for now
+
+# The LangChain way: bind structured output to the model
+from langchain.chat_models import init_chat_model
+
+model = init_chat_model(MODEL)
+structured_model = model.with_structured_output(CodeReview)
+
+code_to_review = """
+def get_user(id):
+    data = eval(open(f"users/{id}.json").read())
+    return data
+"""
+
+review = structured_model.invoke(
+    f"Review this Python code and identify all issues:\n\n{code_to_review}"
+)
+
+# review is now a CodeReview object, not a string
+print(f"Summary: {review.summary}")
+print(f"Score: {review.score}/10")
+print(f"\nIssues ({len(review.issues)}):")
+for issue in review.issues:
+    print(f"  [{issue.severity}] {issue.line}: {issue.issue}")
+    print(f"    Fix: {issue.fix}")
+----
+====
 
 . Run it:
 +
@@ -243,6 +382,10 @@ Let's add several tools and observe how the agent routes between them based on u
 
 . Create an agent with multiple specialized tools:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > multiple_tools.py << 'EOF'
@@ -291,6 +434,55 @@ for question in questions:
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from langchain_core.tools import tool
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+@tool
+def get_timestamp() -> str:
+    """Get the current date and time in ISO format."""
+    from datetime import datetime
+    return datetime.now().isoformat()
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression safely. Only supports basic arithmetic."""
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expression):
+        return "Error: only basic arithmetic is supported"
+    return str(eval(expression))
+
+agent = create_deep_agent(
+    model=MODEL,
+    tools=[word_count, get_timestamp, calculate],
+)
+
+# Try questions that route to different tools
+questions = [
+    "What time is it?",
+    "How many words: 'Hello world from Python'",
+    "What is 15 * 23 + 7?",
+]
+
+for question in questions:
+    print(f"\nQuestion: {question}")
+    result = agent.invoke({"messages": [("user", question)]})
+    print(f"Answer: {agent_response(result)}")
+----
+====
+
 . Run it and watch the agent select the appropriate tool for each question:
 +
 [source,role="execute"]
@@ -317,6 +509,10 @@ The agent automatically chooses the right tool based on the question and the too
 For tools with side effects or high costs, you can add human-in-the-loop approval using interrupts.
 
 . Create an agent that pauses before executing certain tools:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -382,6 +578,72 @@ else:
     print(f"Result: {agent_response(result)}")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from langchain_core.tools import tool
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+@tool
+def word_count(text: str) -> int:
+    """Count the number of words in the given text."""
+    return len(text.split())
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression safely. Only supports basic arithmetic."""
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expression):
+        return "Error: only basic arithmetic is supported"
+    return str(eval(expression))
+
+# Interrupts require a checkpointer to save state between pause and resume
+checkpointer = MemorySaver()
+
+agent = create_deep_agent(
+    model=MODEL,
+    tools=[word_count, calculate],
+    interrupt_on={"calculate": True},
+    checkpointer=checkpointer,
+)
+
+# The agent will pause before executing the calculate tool
+config = {"configurable": {"thread_id": "interrupt-demo"}}
+print("Sending: 'What is 100 * 50?'")
+result = agent.invoke(
+    {"messages": [("user", "What is 100 * 50?")]},
+    config=config,
+)
+
+# Check if we hit an interrupt
+state = agent.get_state(config)
+if state.next:
+    print(f"\n*** INTERRUPT: Agent paused at {state.next} ***")
+    # Show what the agent wants to do
+    last_msg = state.values["messages"][-1]
+    if hasattr(last_msg, 'tool_calls'):
+        for tc in last_msg.tool_calls:
+            print(f"    Tool: {tc['name']}")
+            print(f"    Args: {tc['args']}")
+
+    # Auto-approve for demo purposes
+    print("\n[Auto-approving for demo...]")
+    # Resume by providing approval decisions
+    decisions = {"decisions": [{"type": "approve"}]}
+    result = agent.invoke(Command(resume=decisions), config=config)
+    print(f"\nResult: {agent_response(result)}")
+else:
+    print(f"Result: {agent_response(result)}")
+----
+====
 
 . Run it to see the interrupt mechanism:
 +
