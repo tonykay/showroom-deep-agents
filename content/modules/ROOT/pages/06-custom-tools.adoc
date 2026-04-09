@@ -419,12 +419,14 @@ See xref:21-bonus-mcp.adoc[Bonus: MCP — Connecting Agents to External Services
 
 == Module Summary
 
-You've learned how to extend agents with custom tools:
+You've learned how to extend agents with custom tools and structured data:
 
-- Basic tools using the `@tool` decorator
-- Structured input schemas with Pydantic V2
-- Tool design patterns for effective routing
-- Managing multiple specialized tools
-- Human-in-the-loop approval with interrupts
+- **Basic tools** using the `@tool` decorator — docstrings power the schema
+- **Structured input** with Pydantic V2 — rich field descriptions for complex tool parameters
+- **Structured output** with `with_structured_output()` — typed Pydantic responses for agent pipelines
+- **Tool design patterns** — action-oriented descriptions, tool vs. prompt decisions
+- **Multiple tools** — the agent routes between tools based on descriptions
+- **Human-in-the-loop** — `interrupt_on` with `MemorySaver` and `Command(resume=)` for approval gates
+- **MCP integration** — connect to external tool servers instead of writing everything in Python
 
-Custom tools are where agents become truly useful in real applications. By creating domain-specific tools, you can build agents that integrate with your systems, APIs, and business logic while maintaining control over critical operations through interrupts.
+Custom tools are where agents become truly useful in real applications. The combination of structured input (telling the LLM how to call tools), structured output (getting typed data back), and interrupt gates (human approval for side effects) gives you full control over how agents interact with your systems.
