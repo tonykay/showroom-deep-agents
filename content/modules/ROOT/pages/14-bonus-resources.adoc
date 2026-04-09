@@ -35,6 +35,14 @@ These posts from the LangChain team explain the design decisions and evolution o
 
 * https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate[Talk Python: Deep Agents — LangChain's SDK for Agents That Plan and Delegate] — Sydney Runkle (LangChain) discusses the harness architecture, why docstrings power tool schemas, prompt caching at scale, and non-coding applications of deep agents. The https://talkpython.fm/episodes/show/543/deep-agents-langchains-sdk-for-agents-that-plan-and-delegate#takeaways-anchor[episode takeaways] are an excellent standalone reference covering all key concepts.
 
+== Context Engineering & Agent Architecture
+
+Understanding how context fails is essential for building reliable agents. These articles explain why subagents, summarization, and context isolation matter:
+
+* https://www.dbreunig.com/2025/06/22/how-contexts-fail-and-how-to-fix-them.html[How Contexts Fail and How to Fix Them] — names four failure modes (poisoning, distraction, confusion, clash) with concrete examples from production agent systems
+* https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus[Context Engineering for AI Agents: Lessons from Building Manus] — practical lessons on KV-cache management, tool masking, pattern mimicry, and treating the filesystem as external memory
+* https://simonwillison.net/2025/Jun/27/context-engineering/[Context Engineering] — Simon Willison's overview connecting the emerging discipline to practical agent development
+
 == Observability & Tracing
 
 * https://langfuse.com/docs[LangFuse Documentation] — open-source LLM observability platform
