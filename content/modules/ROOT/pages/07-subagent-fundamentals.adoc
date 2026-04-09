@@ -46,6 +46,10 @@ Let's define and use a research subagent.
 
 . Create a new file:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > research_demo.py << 'EOF'
@@ -79,6 +83,40 @@ print(agent_response(result))
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+researcher = {
+    "name": "researcher",
+    "description": "Use this subagent to research topics and gather information. It focuses on finding facts and summarizing them clearly.",
+    "system_prompt": """You are a research assistant. When given a topic:
+1. Break it down into key aspects
+2. Provide factual, well-organized information
+3. Cite your reasoning
+4. Keep responses concise but thorough""",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[researcher],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the key differences between REST and GraphQL APIs. "
+    "Delegate this to your research subagent."
+)]})
+
+print(agent_response(result))
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -111,6 +149,10 @@ The `subagents` parameter passes them to the main agent, which automatically get
 When you give subagents to a main agent, it receives a `task` tool under the hood. Let's observe it in action.
 
 . Create a delegation inspector:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -151,6 +193,46 @@ for msg in result["messages"]:
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+researcher = {
+    "name": "researcher",
+    "description": "Use this subagent to research topics and gather information. It focuses on finding facts and summarizing them clearly.",
+    "system_prompt": """You are a research assistant. When given a topic:
+1. Break it down into key aspects
+2. Provide factual, well-organized information
+3. Cite your reasoning
+4. Keep responses concise but thorough""",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[researcher],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the key differences between REST and GraphQL APIs. "
+    "Delegate this to your research subagent."
+)]})
+
+print("=== Delegation Analysis ===\n")
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+        for tc in msg.tool_calls:
+            if tc['name'] == 'task':
+                print(f"Delegated to: {tc['args'].get('subagent_type')}")
+                print(f"Task description: {tc['args'].get('description')[:100]}...")
+                print()
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -178,6 +260,10 @@ The subagent runs in its own context, returns the result as tool output, and the
 The `description` field is not just documentation—it's the primary routing mechanism. The main agent reads descriptions to decide which subagent to use.
 
 . Create two subagents with overlapping capabilities but different descriptions:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -228,6 +314,56 @@ for msg in result2["messages"]:
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+fact_finder = {
+    "name": "fact_finder",
+    "description": "Use this subagent to find quick facts, definitions, and basic information. Best for straightforward lookups.",
+    "system_prompt": "You provide concise, factual answers. Focus on clarity and brevity.",
+}
+
+deep_analyst = {
+    "name": "deep_analyst",
+    "description": "Use this subagent for complex analysis requiring critical thinking, trade-off evaluation, and nuanced reasoning.",
+    "system_prompt": "You perform deep analysis. Consider multiple perspectives, evaluate trade-offs, and provide thorough reasoning.",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[fact_finder, deep_analyst],
+)
+
+# Ambiguous task 1
+result1 = agent.invoke({"messages": [("user", "What is REST?")]})
+
+print("=== Task 1: What is REST? ===")
+for msg in result1["messages"]:
+    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+        for tc in msg.tool_calls:
+            if tc['name'] == 'task':
+                print(f"Routed to: {tc['args'].get('subagent_type')}\n")
+
+# Ambiguous task 2
+result2 = agent.invoke({"messages": [("user",
+    "Should I use REST or GraphQL for my new API? Consider team expertise, tooling, and long-term maintenance.")]})
+
+print("=== Task 2: REST vs GraphQL decision ===")
+for msg in result2["messages"]:
+    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+        for tc in msg.tool_calls:
+            if tc['name'] == 'task':
+                print(f"Routed to: {tc['args'].get('subagent_type')}\n")
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -247,6 +383,10 @@ Routed to: deep_analyst
 The simple factual question routes to `fact_finder`. The complex decision routes to `deep_analyst`.
 
 . Now change the descriptions and re-run:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -286,6 +426,45 @@ for msg in result["messages"]:
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+fact_finder = {
+    "name": "fact_finder",
+    "description": "Use this subagent for ANY API-related questions, whether simple or complex.",
+    "system_prompt": "You provide concise, factual answers. Focus on clarity and brevity.",
+}
+
+deep_analyst = {
+    "name": "deep_analyst",
+    "description": "Use this subagent for non-API analysis requiring critical thinking.",
+    "system_prompt": "You perform deep analysis. Consider multiple perspectives, evaluate trade-offs, and provide thorough reasoning.",
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[fact_finder, deep_analyst],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Should I use REST or GraphQL for my new API? Consider team expertise, tooling, and long-term maintenance.")]})
+
+print("=== With changed descriptions ===")
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+        for tc in msg.tool_calls:
+            if tc['name'] == 'task':
+                print(f"Routed to: {tc['args'].get('subagent_type')}\n")
+----
+====
+
 . Run the modified version:
 +
 [source,role="execute"]
@@ -308,6 +487,10 @@ Key lesson: Descriptions are routing signals. Write them carefully to guide dele
 Different tasks need different models. Research might work fine with a fast, cheap model like Haiku. Deep reasoning might need Sonnet or Opus.
 
 . Specify a `model` per subagent:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -350,6 +533,48 @@ print("Task 2 complete (routed to analyst/Sonnet)\n")
 EOF
 ----
 
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+FAST_MODEL = os.environ.get("DEEPAGENTS_FAST_MODEL", "anthropic:claude-haiku-4-5-20251001")
+
+researcher = {
+    "name": "researcher",
+    "description": "Research topics and gather factual information.",
+    "system_prompt": "You are a research assistant. Provide clear, organized facts.",
+    "model": FAST_MODEL,
+}
+
+analyst = {
+    "name": "analyst",
+    "description": "Perform deep analysis requiring careful reasoning.",
+    "system_prompt": "You are an analytical expert. Consider multiple angles, evaluate trade-offs, and provide thorough reasoning.",
+    "model": MODEL,
+}
+
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[researcher, analyst],
+)
+
+# Simple research task -> Haiku
+result1 = agent.invoke({"messages": [("user", "What are the main features of Python?")]})
+print("Task 1 complete (routed to researcher/Haiku)\n")
+
+# Complex analysis -> Sonnet
+result2 = agent.invoke({"messages": [("user",
+    "Analyze whether Python or Rust is better for building a high-performance data processing pipeline. "
+    "Consider performance, developer productivity, ecosystem maturity, and hiring.")]})
+print("Task 2 complete (routed to analyst/Sonnet)\n")
+----
+====
+
 . Run it:
 +
 [source,role="execute"]
@@ -378,6 +603,10 @@ If you don't define a subagent named `general-purpose`, DeepAgents automatically
 This is useful when you want context isolation without specialization—just a fresh slate for a task.
 
 . Create a script to demonstrate the default subagent:
++
+[tabs]
+====
+Run::
 +
 [source,role="execute"]
 ----
@@ -408,6 +637,37 @@ for msg in result["messages"]:
                 print(f"Routed to: {tc['args'].get('subagent_type')}")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# No subagents defined
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=[],  # Empty list
+)
+
+result = agent.invoke({"messages": [("user",
+    "Delegate this task to a subagent: Calculate the factorial of 10 and explain the result."
+)]})
+
+print("=== Result ===")
+print(agent_response(result))
+print("\n=== Delegation ===")
+for msg in result["messages"]:
+    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+        for tc in msg.tool_calls:
+            if tc['name'] == 'task':
+                print(f"Routed to: {tc['args'].get('subagent_type')}")
+----
+====
 
 . Run it:
 +

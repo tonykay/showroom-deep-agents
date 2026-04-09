@@ -149,6 +149,10 @@ EOF
 
 . Create a demo script that uses the loader:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > demo.py << 'EOF'
@@ -172,6 +176,31 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+from pathlib import Path
+from deepagents import create_deep_agent
+from loader import load_subagents
+from utils import agent_response
+
+# Load subagents from YAML
+subagents = load_subagents(Path("subagents.yaml"))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Research the key benefits of YAML for configuration management."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the demo:
 +
@@ -261,6 +290,10 @@ EOF
 
 . Create a content creation demo:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > content_pipeline.py << 'EOF'
@@ -285,6 +318,32 @@ result = agent.invoke({"messages": [("user",
 print(agent_response(result))
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+from pathlib import Path
+from deepagents import create_deep_agent
+from loader import load_subagents
+from utils import agent_response
+
+# Load all three subagents
+subagents = load_subagents(Path("subagents.yaml"))
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    subagents=subagents,
+)
+
+result = agent.invoke({"messages": [("user",
+    "Create a 3-paragraph explanation of microservices architecture. "
+    "First research the topic, then write the content, then review it for quality."
+)]})
+
+print(agent_response(result))
+----
+====
 
 . Run the content pipeline:
 +
@@ -726,6 +785,10 @@ EOF
 
 . Create a test script for validation:
 +
+[tabs]
+====
+Run::
++
 [source,role="execute"]
 ----
 cat > test_validation.py << 'EOF'
@@ -743,6 +806,25 @@ except ValidationError as e:
         print(f"  - {error['loc']}: {error['msg']}")
 EOF
 ----
+
+Code Preview::
++
+[source,python]
+----
+from pathlib import Path
+from validation import validate_subagent_config
+from pydantic import ValidationError
+
+# Test invalid config
+try:
+    config = validate_subagent_config(Path("invalid_subagents.yaml"))
+    print("✓ Config is valid")
+except ValidationError as e:
+    print("✗ Config validation failed:")
+    for error in e.errors():
+        print(f"  - {error['loc']}: {error['msg']}")
+----
+====
 
 . Run the validation test:
 +
