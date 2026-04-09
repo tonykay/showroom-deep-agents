@@ -5,9 +5,21 @@ You've learned state management and tool building. Now you'll master the third p
 
 == Exercise 1: The Context Bloat Problem
 
-As an agent conversation grows, something problematic happens: the context window fills with increasingly irrelevant history. Early exchanges, tangential explorations, dead-end reasoning—all of it sits in memory, consuming tokens and degrading the agent's ability to focus.
+As an agent conversation grows, something problematic happens: the context window fills with increasingly irrelevant history. Early exchanges, tangential explorations, dead-end reasoning — all of it sits in memory, consuming tokens and degrading the agent's ability to focus.
 
-This is the "dumb zone": the point where an agent with a 200K token context window starts acting like it has a 20K window because most of its attention is wasted on noise.
+This is the "dumb zone": the point where an agent with a 200K token context window starts acting like it has a 20K window because most of its attention is wasted on noise. Research from teams building production agents has identified several specific failure modes:
+
+* **Context distraction** — as context grows beyond ~100K tokens, agents start repeating actions from their history rather than synthesizing new plans. They fall into pattern-mimicry, imitating what they've already done rather than reasoning about what to do next.
+
+* **Context confusion** — too many tools or too much irrelevant information overwhelms the model. One study found an 8B model failed with 46 tools loaded but succeeded with just 19 — despite having ample context capacity for all of them.
+
+* **Context poisoning** — early errors or hallucinations become embedded in the history and repeatedly referenced. The agent becomes fixated on incorrect information because it's "in context" and feels authoritative.
+
+* **Context clash** — conflicting information from different conversation turns causes the model to make contradictory assumptions, with performance dropping up to 39% when information is spread across turns.
+
+* **Lost goals** — with ~50+ tool calls, agents drift off-topic or forget earlier objectives. The original task gets buried under layers of intermediate results.
+
+For a deeper dive into these failure modes, see https://www.dbreunig.com/2025/06/22/how-contexts-fail-and-how-to-fix-them.html[How Contexts Fail] and https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus[Context Engineering for AI Agents] from the Manus team.
 
 Subagents solve this with a simple principle: fresh, isolated context per task.
 
