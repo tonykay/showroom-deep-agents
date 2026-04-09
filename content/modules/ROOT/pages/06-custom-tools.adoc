@@ -413,7 +413,9 @@ This pattern is critical for tools with side effects like sending emails, making
 
 === Beyond custom tools: MCP integration
 
-Deep Agents can also consume https://modelcontextprotocol.io[MCP (Model Context Protocol)] servers as tools. MCP is an open standard that lets you connect to community-built integrations — databases, APIs, file systems, and more — without writing custom tool code. If an MCP server exists for a service you want to integrate, you can plug it into your agent directly. This is beyond the scope of this module but worth knowing about as your agent systems grow.
+Deep Agents can also consume https://modelcontextprotocol.io[MCP (Model Context Protocol)] servers as tools. MCP is an open standard that lets you connect to community-built integrations — databases, APIs, file systems, and more — without writing custom tool code. If an MCP server exists for a service you want to integrate, you can plug it into your agent directly.
+
+See xref:21-bonus-mcp.adoc[Bonus: MCP — Connecting Agents to External Services] for a hands-on walkthrough where you build a status checker MCP server and wire it into a Deep Agent with subagents.
 
 == Module Summary
 
