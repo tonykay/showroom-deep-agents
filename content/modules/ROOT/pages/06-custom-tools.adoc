@@ -323,6 +323,7 @@ For tools with side effects or high costs, you can add human-in-the-loop approva
 cat > interrupt_tool.py << 'EOF'
 import os
 from langchain_core.tools import tool
+from langgraph.checkpoint.memory import MemorySaver
 from deepagents import create_deep_agent
 from utils import agent_response
 
@@ -341,10 +342,14 @@ def calculate(expression: str) -> str:
         return "Error: only basic arithmetic is supported"
     return str(eval(expression))
 
+# Interrupts require a checkpointer to save state between pause and resume
+checkpointer = MemorySaver()
+
 agent = create_deep_agent(
     model=MODEL,
     tools=[word_count, calculate],
     interrupt_on={"calculate": True},
+    checkpointer=checkpointer,
 )
 
 # The agent will pause before executing the calculate tool
@@ -387,7 +392,12 @@ Approve execution? (y/n)
 Result: The result is 5000.
 ----
 
-The agent pauses before executing the specified tool and waits for approval. This is critical for tools with side effects like sending emails, making purchases, or deleting files.
+The agent pauses before executing the `calculate` tool and waits for approval. Notice two requirements for interrupts:
+
+* **`interrupt_on={"calculate": True}`** — tells the agent which tools need approval
+* **`checkpointer=MemorySaver()`** — saves the agent's state when it pauses so it can resume after approval. Without a checkpointer, `get_state()` fails because there's nowhere to store the paused state.
+
+This pattern is critical for tools with side effects like sending emails, making purchases, or deleting files.
 
 === Beyond custom tools: MCP integration
 
