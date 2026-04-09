@@ -153,19 +153,16 @@ Here's what happens when the main agent calls `task()`:
 [mermaid]
 ....
 sequenceDiagram
-    participant User
     participant Main as Main Agent
-    participant Task as task() tool
     participant Sub as Subagent
 
-    User->>Main: "Research REST vs GraphQL"
+    Note over Main: User asks a question
     Main->>Main: Reads subagent descriptions
-    Main->>Task: task(subagent_type="researcher", description="...")
-    Task->>Sub: Creates fresh agent with system_prompt
-    Sub->>Sub: Works in isolated context
-    Sub-->>Task: Returns result as string
-    Task-->>Main: Result arrives as ToolMessage
-    Main->>User: Integrates result into final response
+    Main->>+Sub: task(subagent_type, description)
+    Note over Sub: Fresh context — no history
+    Sub->>Sub: Reasons and uses tools
+    Sub-->>-Main: Result as ToolMessage
+    Note over Main: Integrates result
 ....
 
 The key insight is that the subagent's entire lifecycle — creation, execution, and cleanup — happens inside a single tool call. The main agent sees only the final result as a `ToolMessage`, not the subagent's intermediate reasoning or tool calls. This is what keeps the main agent's context clean.
