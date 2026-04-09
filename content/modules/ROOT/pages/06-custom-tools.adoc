@@ -324,6 +324,7 @@ cat > interrupt_tool.py << 'EOF'
 import os
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
 from deepagents import create_deep_agent
 from utils import agent_response
 
@@ -354,25 +355,29 @@ agent = create_deep_agent(
 
 # The agent will pause before executing the calculate tool
 config = {"configurable": {"thread_id": "interrupt-demo"}}
+print("Sending: 'What is 100 * 50?'")
 result = agent.invoke(
     {"messages": [("user", "What is 100 * 50?")]},
-    config=config
+    config=config,
 )
 
 # Check if we hit an interrupt
 state = agent.get_state(config)
 if state.next:
-    print(f"Agent paused before calling: {state.next}")
-    print("Approve execution? (y/n)")
-    # In a real app, you'd wait for user input
-    # For demo purposes, we'll auto-approve
-    approval = "y"
-    if approval.lower() == "y":
-        # Continue execution
-        result = agent.invoke(None, config=config)
-        print(f"Result: {agent_response(result)}")
-    else:
-        print("Execution cancelled")
+    print(f"\n*** INTERRUPT: Agent paused at {state.next} ***")
+    # Show what the agent wants to do
+    last_msg = state.values["messages"][-1]
+    if hasattr(last_msg, 'tool_calls'):
+        for tc in last_msg.tool_calls:
+            print(f"    Tool: {tc['name']}")
+            print(f"    Args: {tc['args']}")
+
+    # Auto-approve for demo purposes
+    print("\n[Auto-approving for demo...]")
+    # Resume by providing approval decisions
+    decisions = {"decisions": [{"type": "approve"}]}
+    result = agent.invoke(Command(resume=decisions), config=config)
+    print(f"\nResult: {agent_response(result)}")
 else:
     print(f"Result: {agent_response(result)}")
 EOF
@@ -387,15 +392,22 @@ uv run interrupt_tool.py
 +
 .Sample output (your results may vary)
 ----
-Agent paused before calling: ('tools',)
-Approve execution? (y/n)
-Result: The result is 5000.
+Sending: 'What is 100 * 50?'
+
+*** INTERRUPT: Agent paused at ('HumanInTheLoopMiddleware.after_model',) ***
+    Tool: calculate
+    Args: {'expression': '100 * 50'}
+
+[Auto-approving for demo...]
+
+Result: The result of 100 * 50 is 5000.
 ----
 
-The agent pauses before executing the `calculate` tool and waits for approval. Notice two requirements for interrupts:
+The agent pauses before executing `calculate`, shows you exactly what it wants to do, and waits for approval. Notice three requirements:
 
 * **`interrupt_on={"calculate": True}`** — tells the agent which tools need approval
-* **`checkpointer=MemorySaver()`** — saves the agent's state when it pauses so it can resume after approval. Without a checkpointer, `get_state()` fails because there's nowhere to store the paused state.
+* **`checkpointer=MemorySaver()`** — saves the agent's state when it pauses so it can resume. Without a checkpointer, there's nowhere to store the paused state.
+* **`Command(resume=decisions)`** — resumes execution by passing the approval decision back to the agent
 
 This pattern is critical for tools with side effects like sending emails, making purchases, or deleting files.
 
