@@ -53,6 +53,15 @@ This structure is clean, readable, and completely separate from your application
 
 The core of the YAML subagent pattern is a loader function that reads the YAML file and converts it to the subagent dictionary format that `create_deep_agent()` expects.
 
+. Set up a clean working directory for this exercise:
++
+[source,role="execute"]
+----
+mkdir -p yaml_demo
+cp utils.py yaml_demo/
+cd yaml_demo
+----
+
 . Define a simulated `web_search` tool:
 +
 [source,role="execute"]
