@@ -53,14 +53,6 @@ This structure is clean, readable, and completely separate from your application
 
 The core of the YAML subagent pattern is a loader function that reads the YAML file and converts it to the subagent dictionary format that `create_deep_agent()` expects.
 
-. Create a new directory for this exercise:
-+
-[source,role="execute"]
-----
-mkdir -p yaml_demo
-cd yaml_demo
-----
-
 . Define a simulated `web_search` tool:
 +
 [source,role="execute"]
@@ -156,16 +148,19 @@ Run::
 [source,role="execute"]
 ----
 cat > demo.py << 'EOF'
+import os
 from pathlib import Path
 from deepagents import create_deep_agent
 from loader import load_subagents
 from utils import agent_response
 
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
 # Load subagents from YAML
 subagents = load_subagents(Path("subagents.yaml"))
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=subagents,
 )
 
@@ -297,16 +292,19 @@ Run::
 [source,role="execute"]
 ----
 cat > content_pipeline.py << 'EOF'
+import os
 from pathlib import Path
 from deepagents import create_deep_agent
 from loader import load_subagents
 from utils import agent_response
 
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
 # Load all three subagents
 subagents = load_subagents(Path("subagents.yaml"))
 
 agent = create_deep_agent(
-    model="anthropic:claude-sonnet-4-6",
+    model=MODEL,
     subagents=subagents,
 )
 
