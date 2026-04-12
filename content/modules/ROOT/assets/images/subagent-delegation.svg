@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1971c2"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2f9e44"/>
+    </marker>
+    <marker id="arrow-green-rev" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#2f9e44"/>
+    </marker>
+  </defs>
+
+  <!-- Main Agent box -->
+  <rect x="40" y="100" width="200" height="120" rx="8" fill="#dbe4ff" stroke="#1971c2" stroke-width="2"/>
+  <text x="140" y="152" text-anchor="middle" font-size="18" font-weight="600" fill="#1971c2">Main Agent</text>
+  <text x="140" y="178" text-anchor="middle" font-size="14" fill="#495057">Full Context</text>
+
+  <!-- Subagent 1 box -->
+  <rect x="540" y="20" width="210" height="100" rx="8" fill="#d3f9d8" stroke="#2f9e44" stroke-width="2"/>
+  <text x="645" y="62" text-anchor="middle" font-size="18" font-weight="600" fill="#2f9e44">Subagent</text>
+  <text x="645" y="88" text-anchor="middle" font-size="14" fill="#495057">Fresh Context</text>
+
+  <!-- Subagent 2 box -->
+  <rect x="540" y="200" width="210" height="100" rx="8" fill="#d3f9d8" stroke="#2f9e44" stroke-width="2"/>
+  <text x="645" y="242" text-anchor="middle" font-size="18" font-weight="600" fill="#2f9e44">Subagent</text>
+  <text x="645" y="268" text-anchor="middle" font-size="14" fill="#495057">Fresh Context</text>
+
+  <!-- Task arrow 1: Main Agent → Subagent 1 -->
+  <line x1="240" y1="135" x2="537" y2="58" stroke="#1971c2" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="340" y="72" width="50" height="22" rx="4" fill="white" fill-opacity="0.9"/>
+  <text x="365" y="88" text-anchor="middle" font-size="13" font-weight="600" fill="#1971c2">task</text>
+
+  <!-- Result arrow 1: Subagent 1 → Main Agent -->
+  <line x1="537" y1="82" x2="243" y2="155" stroke="#2f9e44" stroke-width="2" stroke-dasharray="8 5" marker-end="url(#arrow-green-rev)" marker-start="none"/>
+  <line x1="537" y1="82" x2="243" y2="155" stroke="#2f9e44" stroke-width="2" stroke-dasharray="8 5"/>
+  <polygon points="243,155 255,147 253,158" fill="#2f9e44"/>
+  <rect x="340" y="103" width="60" height="22" rx="4" fill="white" fill-opacity="0.9"/>
+  <text x="370" y="119" text-anchor="middle" font-size="13" font-weight="600" fill="#2f9e44">result</text>
+
+  <!-- Task arrow 2: Main Agent → Subagent 2 -->
+  <line x1="240" y1="185" x2="537" y2="240" stroke="#1971c2" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="340" y="195" width="50" height="22" rx="4" fill="white" fill-opacity="0.9"/>
+  <text x="365" y="211" text-anchor="middle" font-size="13" font-weight="600" fill="#1971c2">task</text>
+
+  <!-- Result arrow 2: Subagent 2 → Main Agent -->
+  <line x1="537" y1="262" x2="243" y2="195" stroke="#2f9e44" stroke-width="2" stroke-dasharray="8 5"/>
+  <polygon points="243,195 255,187 253,198" fill="#2f9e44"/>
+  <rect x="340" y="228" width="60" height="22" rx="4" fill="white" fill-opacity="0.9"/>
+  <text x="370" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#2f9e44">result</text>
+</svg>

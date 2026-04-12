@@ -29,14 +29,7 @@ TIP: This isn't just about avoiding errors — smaller subagents with focused co
 
 Here's the pattern:
 
-[mermaid]
-....
-graph LR
-    A[Main Agent<br/>Full Context] -->|task| B[Subagent<br/>Fresh Context]
-    B -->|result| A
-    A -->|task| C[Subagent<br/>Fresh Context]
-    C -->|result| A
-....
+image::subagent-delegation.svg[Subagent delegation pattern — Main Agent delegates tasks to Subagents with fresh context,align="center",link=self,window=blank,width=700]
 
 This architecture keeps each piece of work sharp and focused, while the main agent handles orchestration and integration.
 
