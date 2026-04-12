@@ -81,6 +81,7 @@ EOF
 [source,role="execute"]
 ----
 cat > loader.py << 'EOF'
+import os
 import yaml
 from pathlib import Path
 from tools import web_search
@@ -91,6 +92,11 @@ def load_subagents(config_path: Path) -> list:
     Maps tool name strings in YAML to actual tool objects.
     This is a custom utility—deepagents doesn't natively
     load subagents from files.
+
+    Model precedence (highest wins):
+      1. Environment variable: {NAME}_MODEL (e.g. RESEARCHER_MODEL)
+      2. YAML model: field
+      3. No model — inherits from the main agent
     """
     # Registry of available tools
     available_tools = {
@@ -108,9 +114,13 @@ def load_subagents(config_path: Path) -> list:
             "system_prompt": spec["system_prompt"],
         }
 
-        # Optional: model override
-        if "model" in spec:
-            subagent["model"] = spec["model"]
+        # Model: check env var override first, then YAML, then inherit
+        # e.g. "researcher" checks RESEARCHER_MODEL
+        #      "fact-checker" checks FACT_CHECKER_MODEL
+        env_key = f"{name.upper().replace('-', '_')}_MODEL"
+        model = os.environ.get(env_key, spec.get("model"))
+        if model:
+            subagent["model"] = model
 
         # Optional: tools
         if "tools" in spec:
@@ -633,7 +643,61 @@ The reviewer now provides stricter, more detailed feedback.
 +
 All three changes were YAML-only. No Python edits. This is the power of the loader pattern: your application code is generic and stable, while your agent behavior is data-driven and easy to iterate.
 
-== Exercise 5: Structuring Larger Projects
+== Exercise 5: Runtime Model Overrides
+
+You may have noticed that the loader function checks for environment variables before using the model from YAML. This is a powerful pattern worth understanding.
+
+Your YAML defines sensible defaults — the researcher uses Haiku for speed, the writer uses Sonnet for quality. But what if you want to test the whole pipeline with a different provider? Or run the same config against a local model? You shouldn't have to edit YAML for that.
+
+The loader resolves models with this precedence:
+
+[cols="1,3,3",options="header"]
+|===
+|Priority |Source |Example
+
+|1 (highest)
+|Environment variable `{NAME}_MODEL`
+|`RESEARCHER_MODEL=openai:llama-scout-17b`
+
+|2
+|YAML `model:` field
+|`model: anthropic:claude-haiku-4-5-20251001`
+
+|3 (lowest)
+|No model set — inherits from main agent
+|Main agent's `MODEL` value
+|===
+
+The naming convention is straightforward: take the subagent name, uppercase it, replace hyphens with underscores, append `_MODEL`. So `researcher` becomes `RESEARCHER_MODEL` and `fact-checker` becomes `FACT_CHECKER_MODEL`.
+
+. Try overriding just the researcher's model at runtime:
++
+[source,role="execute"]
+----
+RESEARCHER_MODEL=anthropic:claude-sonnet-4-6 uv run demo.py
+----
++
+The researcher now uses Sonnet instead of Haiku — without touching YAML.
+
+. Override multiple models at once:
++
+[source,role="execute"]
+----
+RESEARCHER_MODEL=anthropic:claude-sonnet-4-6 WRITER_MODEL=anthropic:claude-haiku-4-5-20251001 uv run content_pipeline.py
+----
++
+Now the researcher uses the more capable model while the writer uses the faster one — the opposite of the YAML defaults.
+
+This pattern is essential for real-world agent systems:
+
+* **Development** — test with cheap, fast models while iterating on prompts
+* **Staging** — validate with production models before deploying
+* **Production** — swap providers or models without redeploying code or editing config
+* **Debugging** — temporarily upgrade a subagent's model to see if quality improves
+
+The YAML captures your _intended_ configuration. Environment variables provide the _operational_ flexibility to override it.
+
+== Exercise 6: Structuring Larger Projects
 
 As your agent system grows, you'll need patterns for organizing subagent configurations.
 
@@ -698,12 +762,16 @@ EOF
 [source,role="execute"]
 ----
 cat > loader_v2.py << 'EOF'
+import os
 import yaml
 from pathlib import Path
 from tools import web_search
 
 def load_subagents_from_dir(dir_path: Path) -> list:
-    """Load subagent definitions from a directory of YAML files."""
+    """Load subagent definitions from a directory of YAML files.
+
+    Same env var override as loader.py — {NAME}_MODEL overrides YAML.
+    """
     available_tools = {
         "web_search": web_search,
     }
@@ -720,8 +788,11 @@ def load_subagents_from_dir(dir_path: Path) -> list:
             "system_prompt": spec["system_prompt"],
         }
 
-        if "model" in spec:
-            subagent["model"] = spec["model"]
+        # Model: env var override, then YAML, then inherit
+        env_key = f"{name.upper().replace('-', '_')}_MODEL"
+        model = os.environ.get(env_key, spec.get("model"))
+        if model:
+            subagent["model"] = model
 
         if "tools" in spec:
             subagent["tools"] = [available_tools[t] for t in spec["tools"]]
@@ -922,12 +993,14 @@ You've accomplished:
 - Building a `load_subagents()` helper to map YAML to Python
 - Creating multi-subagent YAML configurations
 - Iterating on agent behavior via config-only changes
+- Overriding models at runtime via environment variables
 - Structuring larger projects with directory-based configs and validation
 
 Key takeaways:
 
 - Separate configuration from code for easier iteration
 - Use directive descriptions ("ALWAYS use this first...") as routing signals
+- Environment variables override YAML models — same config works across dev, staging, and production
 - Validate configs with Pydantic V2 to catch errors early
 - Single YAML works for small teams; directories scale better for large teams
 - YAML-only changes let you refine behavior without redeploying code
