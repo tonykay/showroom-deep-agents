@@ -315,7 +315,7 @@ import os
 from pathlib import Path
 from deepagents import create_deep_agent
 from loader import load_subagents
-from utils import agent_response
+from utils import agent_response, delegation_trace
 
 MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
 
@@ -332,6 +332,8 @@ result = agent.invoke({"messages": [("user",
     "First research the topic, then write the content, then review it for quality."
 )]})
 
+# Show which subagents were called and in what order
+print(delegation_trace(result))
 print(agent_response(result))
 EOF
 ----
@@ -371,12 +373,14 @@ uv run content_pipeline.py
 +
 .Sample output (your results may vary)
 ----
-[Delegating to researcher subagent...]
-[Researching microservices architecture...]
-[Delegating to writer subagent...]
-[Writing content based on research...]
-[Delegating to reviewer subagent...]
-[Reviewing content for quality...]
+=== Delegation Trace ===
+  Step 1: researcher
+          Research microservices architecture: key concepts, benefits, trade-offs, ...
+  Step 2: writer
+          Write a 3-paragraph explanation of microservices architecture based on th...
+  Step 3: reviewer
+          Review the following content for accuracy, clarity, and completeness...
+  Total: 3 delegation(s)
 
 Microservices architecture is a software design pattern that structures an application as a collection
 of loosely coupled, independently deployable services...
@@ -385,7 +389,7 @@ This approach enables teams to work autonomously, scale components individually,
 resilience even when individual services fail.
 ----
 +
-Observe the orchestration:
+The delegation trace shows the orchestration clearly:
 +
 1. Main agent delegates research to `researcher` (Haiku)
 2. Takes research results, delegates writing to `writer` (Sonnet)

@@ -163,16 +163,45 @@ def agent_response(result):
             if isinstance(b, dict) and b.get("type") == "text"
         )
     return content
+
+
+def delegation_trace(result):
+    """Show the sequence of subagent delegations from an agent result.
+
+    Prints each task() tool call: which subagent was called and what
+    it was asked to do. Useful for understanding orchestration flow.
+    """
+    steps = []
+    for msg in result["messages"]:
+        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+            for tc in msg.tool_calls:
+                if tc['name'] == 'task':
+                    args = tc['args']
+                    agent_name = args.get('subagent_type', 'unknown')
+                    desc = args.get('description', '')[:80]
+                    steps.append((agent_name, desc))
+
+    if not steps:
+        return "No delegations found."
+
+    lines = ["", "=== Delegation Trace ==="]
+    for i, (agent_name, desc) in enumerate(steps, 1):
+        lines.append(f"  Step {i}: {agent_name}")
+        lines.append(f"          {desc}...")
+    lines.append(f"  Total: {len(steps)} delegation(s)")
+    lines.append("")
+    return "\n".join(lines)
 EOF
 ----
 +
-You'll use this in scripts with a simple import:
+You'll use these in scripts with a simple import:
 +
 [source,python]
 ----
-from utils import agent_response
+from utils import agent_response, delegation_trace
 
-print(agent_response(result))
+print(delegation_trace(result))  # Shows which subagents were called
+print(agent_response(result))    # Shows the final response
 ----
 
 == Install the Deep Agents CLI
