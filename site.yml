@@ -24,10 +24,118 @@ ui:
         <script src="{{uiRootPath}}/js/site.js"></script>
         <script async src="{{uiRootPath}}/js/vendor/highlight.js"></script>
         <script async src="{{uiRootPath}}/js/vendor/tabs.js"></script>
+        <script>
+        /* Lightbox for images and Mermaid diagrams */
+        document.addEventListener('DOMContentLoaded', function () {
+          function addHints() {
+            document.querySelectorAll('.imageblock, .mermaid').forEach(function (el) {
+              if (el.querySelector('.lightbox-hint')) return;
+              var hint = document.createElement('span');
+              hint.className = 'lightbox-hint';
+              hint.textContent = '\uD83D\uDD0D Click to enlarge';
+              el.appendChild(hint);
+            });
+          }
+          function openLightbox(content) {
+            var overlay = document.createElement('div');
+            overlay.className = 'lightbox-overlay';
+            var close = document.createElement('span');
+            close.className = 'lightbox-close';
+            close.innerHTML = '&times;';
+            overlay.appendChild(close);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
+            function dismiss() {
+              overlay.remove();
+              document.body.style.overflow = '';
+            }
+            overlay.addEventListener('click', dismiss);
+            document.addEventListener('keydown', function esc(e) {
+              if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', esc); }
+            });
+          }
+          document.addEventListener('click', function (e) {
+            var img = e.target.closest('.imageblock img');
+            if (img) { e.preventDefault(); var clone = img.cloneNode(true); clone.style.transform = 'none'; openLightbox(clone); return; }
+            var svg = e.target.closest('.mermaid svg');
+            if (svg) { var clone = svg.cloneNode(true); clone.style.transform = 'none'; openLightbox(clone); }
+          });
+          addHints();
+          new MutationObserver(addHints).observe(document.body, { childList: true, subtree: true });
+        });
+        </script>
     - path: partials/head-styles.hbs
       contents: |
         <link rel="stylesheet" href="{{{uiRootPath}}}/css/site.css">
         <link rel="stylesheet" href="{{{uiRootPath}}}/css/vendor/tabs.css">
+        <style>
+        /* Lightbox: clickable images and diagrams */
+        .imageblock img, .mermaid svg {
+          cursor: zoom-in;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .imageblock img:hover, .mermaid svg:hover {
+          transform: scale(1.02);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+        .imageblock .title, .mermaid-graph + .paragraph {
+          cursor: default;
+        }
+        /* Magnifying glass hint */
+        .imageblock, .mermaid {
+          position: relative;
+        }
+        .lightbox-hint {
+          position: absolute;
+          bottom: 8px;
+          right: 8px;
+          background: rgba(0,0,0,0.55);
+          color: #fff;
+          font-size: 12px;
+          padding: 3px 8px;
+          border-radius: 4px;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+        .imageblock:hover .lightbox-hint,
+        .mermaid:hover .lightbox-hint {
+          opacity: 1;
+        }
+        /* Overlay */
+        .lightbox-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.85);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          cursor: zoom-out;
+          padding: 2rem;
+        }
+        .lightbox-overlay img,
+        .lightbox-overlay svg {
+          max-width: 95vw;
+          max-height: 92vh;
+          background: #fff;
+          border-radius: 6px;
+          padding: 1rem;
+          box-shadow: 0 4px 30px rgba(0,0,0,0.4);
+        }
+        .lightbox-close {
+          position: fixed;
+          top: 1rem;
+          right: 1.5rem;
+          color: #fff;
+          font-size: 2rem;
+          cursor: pointer;
+          z-index: 10000;
+          line-height: 1;
+        }
+        </style>
 
 asciidoc:
   extensions:
