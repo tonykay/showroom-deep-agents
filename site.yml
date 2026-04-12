@@ -30,6 +30,7 @@ ui:
           function addHints() {
             document.querySelectorAll('.imageblock, .mermaid').forEach(function (el) {
               if (el.querySelector('.lightbox-hint')) return;
+              if (el.classList.contains('mermaid') && !el.querySelector('svg')) return;
               var hint = document.createElement('span');
               hint.className = 'lightbox-hint';
               hint.textContent = '\uD83D\uDD0D Click to enlarge';
