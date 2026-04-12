@@ -332,8 +332,8 @@ result = agent.invoke({"messages": [("user",
     "First research the topic, then write the content, then review it for quality."
 )]})
 
-# Show which subagents were called and in what order
-print(delegation_trace(result))
+# Show which subagents were called, their models, and in what order
+print(delegation_trace(result, subagents=subagents))
 print(agent_response(result))
 EOF
 ----
@@ -374,11 +374,11 @@ uv run content_pipeline.py
 .Sample output (your results may vary)
 ----
 === Delegation Trace ===
-  Step 1: researcher
+  Step 1: researcher (anthropic:claude-sonnet-4-6)
           Research microservices architecture: key concepts, benefits, trade-offs, ...
-  Step 2: writer
+  Step 2: writer (anthropic:claude-sonnet-4-6)
           Write a 3-paragraph explanation of microservices architecture based on th...
-  Step 3: reviewer
+  Step 3: reviewer (anthropic:claude-sonnet-4-6)
           Review the following content for accuracy, clarity, and completeness...
   Total: 3 delegation(s)
 
