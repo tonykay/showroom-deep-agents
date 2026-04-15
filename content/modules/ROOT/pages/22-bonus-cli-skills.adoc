@@ -1,0 +1,483 @@
+= Bonus: CLI Skills Development
+:source-highlighter: rouge
+
+In xref:11-cli.adoc[Module 11] you learned the CLI basics — TUI, configuration, headless mode. Now you'll use the CLI as a *skill development tool*: the fastest way to write, test, and iterate on agent capabilities that work in both the CLI and your Python code.
+
+This module builds on xref:09-skills.adoc[Module 9]'s SKILL.md format. You'll create real skills, test them interactively, iterate without restarting, prove they work headlessly, and then use the exact same files programmatically.
+
+== Exercise 1: Skill Anatomy Refresher
+
+A skill is a directory containing a `SKILL.md` file. The file has YAML frontmatter (name, description) and a markdown body with instructions. Here's the minimal structure:
+
+[source]
+----
+skills/
+  hello-skill/
+    SKILL.md
+----
+
+The CLI discovers skills from several directories, checked in this order (later entries override earlier ones on name collision):
+
+[cols="1,2",options="header"]
+|===
+|Location |Scope
+
+|`~/.deepagents/<agent>/skills/`
+|User-level — available in all CLI sessions
+
+|`~/.agents/skills/`
+|User-level (alternative path)
+
+|`.deepagents/skills/`
+|Project-level — available when you're in this directory
+
+|`.agents/skills/`
+|Project-level (alternative path)
+|===
+
+. Create a minimal skill that formats greetings in different styles:
++
+[source,role="execute"]
+----
+mkdir -p skills/hello-skill
+cat > skills/hello-skill/SKILL.md << 'EOF'
+---
+name: hello-skill
+description: Format greetings in different styles — formal, casual, or pirate
+---
+
+When asked to greet someone, format the greeting based on the requested style:
+
+- **formal**: "Dear [Name], I hope this message finds you well."
+- **casual**: "Hey [Name]! What's up?"
+- **pirate**: "Ahoy, [Name]! Ye scurvy dog!"
+
+Always include the person's name. If no style is specified, default to casual.
+EOF
+----
+
+. Verify the CLI discovers it:
++
+[source,role="execute"]
+----
+deepagents skills list
+----
++
+.Sample output (your results may vary)
+----
+Available skills:
+  hello-skill - Format greetings in different styles — formal, casual, or pirate
+...
+----
++
+The `description` from the frontmatter is what the agent sees in its skill catalog. It uses this to decide when to auto-select the skill.
+
+== Exercise 2: Interactive Testing & Iteration
+
+The CLI's edit → reload → test loop is the fastest way to develop skills. You don't need to restart the CLI to pick up changes.
+
+. Launch the CLI:
++
+[source,role="execute"]
+----
+deepagents
+----
+
+. Invoke the skill explicitly:
++
+----
+/skill:hello-skill Greet Alice in pirate style
+----
++
+.Sample output (your results may vary)
+----
+Ahoy, Alice! Ye scurvy dog!
+----
+
+. Now try without specifying a style:
++
+----
+/skill:hello-skill Greet Bob
+----
++
+The agent should default to casual. If the output isn't what you expect — maybe it's too verbose or ignores the default — you can fix the skill without leaving the CLI.
+
+. In a separate terminal, edit the SKILL.md to improve it. For example, add an output constraint:
++
+[source,role="execute"]
+----
+cat > skills/hello-skill/SKILL.md << 'EOF'
+---
+name: hello-skill
+description: Format greetings in different styles — formal, casual, or pirate
+---
+
+When asked to greet someone, format the greeting based on the requested style:
+
+- **formal**: "Dear [Name], I hope this message finds you well."
+- **casual**: "Hey [Name]! What's up?"
+- **pirate**: "Ahoy, [Name]! Ye scurvy dog!"
+
+Always include the person's name. If no style is specified, default to casual.
+
+IMPORTANT: Output ONLY the greeting line. No preamble, no explanation, no extra text.
+EOF
+----
+
+. Back in the CLI, reload and re-test:
++
+----
+/reload
+/skill:hello-skill Greet Charlie
+----
++
+The skill now produces tighter output. This is the dev loop: edit the SKILL.md → `/reload` → test → repeat. No restarts, no redeployment.
+
+. Exit the CLI when you're satisfied:
++
+----
+/exit
+----
+
+== Exercise 3: A Real Skill — code-explainer
+
+Let's build something useful: a skill that explains code at a chosen level of detail.
+
+. Create the code-explainer skill:
++
+[source,role="execute"]
+----
+mkdir -p skills/code-explainer
+cat > skills/code-explainer/SKILL.md << 'EOF'
+---
+name: code-explainer
+description: Explain code at a chosen level — beginner, intermediate, or expert
+---
+
+When given code to explain, adapt your explanation to the requested level:
+
+## Beginner
+- Explain what every line does in plain English
+- Define technical terms when you use them
+- Use analogies to everyday concepts
+- Assume no programming background
+
+## Intermediate
+- Focus on the logic flow and design patterns
+- Explain why things are done this way, not just what they do
+- Mention relevant standard library or framework concepts
+- Assume familiarity with the language basics
+
+## Expert
+- Focus on performance characteristics, edge cases, and trade-offs
+- Discuss algorithmic complexity where relevant
+- Note any subtle bugs or improvements
+- Assume deep language and ecosystem knowledge
+
+If no level is specified, default to intermediate.
+
+Format: Start with a one-sentence summary, then the detailed explanation.
+EOF
+----
+
+. Launch the CLI and test with a code sample:
++
+[source,role="execute"]
+----
+deepagents
+----
++
+Try: "Explain this code for a beginner:" followed by a small Python snippet, or pipe a file:
++
+----
+/skill:code-explainer Explain this for a beginner:
+
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+----
+
+. Now ask for the same code at expert level:
++
+----
+/skill:code-explainer Explain this for an expert:
+
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+----
++
+Notice how the same skill adapts its output based on the level. The SKILL.md body defines the behavior; the agent follows it.
+
+. Try auto-selection — don't invoke the skill explicitly:
++
+----
+Can you explain what this Python function does?
+
+def memoize(func):
+    cache = {}
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    return wrapper
+----
++
+The agent reads all skill descriptions and decides whether `code-explainer` is the right fit. If the description is specific enough, it will auto-select. If not, you'd refine the description.
+
+. Exit the CLI:
++
+----
+/exit
+----
+
+== Exercise 4: Headless Mode
+
+The same skills work in non-interactive mode — pipe input, get output, no TUI. This is the same skill, same behavior, different interface.
+
+. Run the code-explainer headlessly on a file:
++
+[source,role="execute"]
+----
+cat > sample_code.py << 'EOF'
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def expensive_lookup(key: str) -> dict:
+    # Simulate a slow database query
+    import time
+    time.sleep(0.1)
+    return {"key": key, "value": f"result_{key}"}
+EOF
+----
++
+[source,role="execute"]
+----
+cat sample_code.py | deepagents --skill code-explainer -n "explain for a beginner" -q
+----
++
+.Sample output (your results may vary)
+----
+This code creates a function that remembers its answers to avoid doing slow work twice.
+
+The `@lru_cache(maxsize=128)` line is a decorator that tells Python: "If someone
+asks for the same key again, just return what you calculated last time instead of
+waiting." It keeps up to 128 previous answers in memory...
+----
+
+. Pipe the output to a file:
++
+[source,role="execute"]
+----
+cat sample_code.py | deepagents --skill code-explainer -n "explain for an expert" -q > explanation.txt
+cat explanation.txt
+----
++
+The `-q` flag gives clean output suitable for piping — no TUI chrome, no progress indicators, just the response.
+
+. Combine with shell tools:
++
+[source,role="execute"]
+----
+git diff HEAD~1 | deepagents --skill code-explainer -n "summarize what changed" -q
+----
++
+This is the power of headless mode: your skills become composable shell commands. Anything that produces text can be piped in; the output can be piped to files, other commands, or CI/CD pipelines.
+
+NOTE: In non-interactive mode, shell execution is disabled by default. Use `-S recommended` to allow common commands, or `-S "pytest,git,make"` for specific ones.
+
+== Exercise 5: A Second Skill — code-reviewer
+
+Let's add a second skill so the agent has a choice of capabilities.
+
+. Create the code-reviewer skill:
++
+[source,role="execute"]
+----
+mkdir -p skills/code-reviewer
+cat > skills/code-reviewer/SKILL.md << 'EOF'
+---
+name: code-reviewer
+description: Review code for bugs, security issues, and improvements
+---
+
+When asked to review code, provide structured feedback:
+
+## Review Checklist
+1. **Bugs** — logic errors, off-by-one, null/undefined risks
+2. **Security** — injection, secrets in code, unsafe deserialization
+3. **Performance** — unnecessary allocations, O(n^2) where O(n) exists
+4. **Readability** — naming, complexity, missing context
+5. **Testing** — what tests would you add?
+
+## Output Format
+For each finding:
+- **Category**: [Bug/Security/Performance/Readability/Testing]
+- **Location**: function or line reference
+- **Issue**: what's wrong
+- **Fix**: concrete suggestion
+
+End with a summary: "X findings: N bugs, N security, N performance, N readability, N testing suggestions."
+
+If no issues found in a category, skip it. Be specific — no vague advice.
+EOF
+----
+
+. Test interactively:
++
+[source,role="execute"]
+----
+deepagents
+----
++
+----
+/skill:code-reviewer Review this code:
+
+def process_user_input(data):
+    query = f"SELECT * FROM users WHERE name = '{data}'"
+    result = db.execute(query)
+    password = "admin123"
+    return result
+----
++
+.Sample output (your results may vary)
+----
+**Security**: SQL injection — `data` is interpolated directly into the query.
+  Fix: Use parameterized queries: `db.execute("SELECT * FROM users WHERE name = ?", (data,))`
+
+**Security**: Hardcoded password on line 4.
+  Fix: Move to environment variable or secrets manager.
+
+Summary: 2 findings: 0 bugs, 2 security, 0 performance, 0 readability, 0 testing suggestions.
+----
+
+. Exit and test headlessly with a real diff:
++
+[source,role="execute"]
+----
+/exit
+----
++
+[source,role="execute"]
+----
+git diff | deepagents --skill code-reviewer -n "focus on security issues" -q
+----
++
+Two skills now coexist. When you ask without specifying a skill, the agent reads both descriptions and routes to the right one — "explain this code" goes to `code-explainer`, "review this for bugs" goes to `code-reviewer`.
+
+== Exercise 6: Programmatic Bridge
+
+The skills you developed in the CLI work identically with the Python SDK. Same SKILL.md files, same behavior, now embedded in your application.
+
+. Create a script that uses both skills programmatically:
++
+[tabs]
+====
+Run::
++
+[source,role="execute"]
+----
+cat > skill_bridge.py << 'EOF'
+import os
+from deepagents import create_deep_agent
+from utils import agent_response, delegation_trace
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Point the SDK at the same skills directory the CLI uses
+agent = create_deep_agent(
+    model=MODEL,
+    skills=["./skills/"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Explain what a Python decorator does, for a beginner."
+)]})
+
+print(delegation_trace(result))
+print(agent_response(result))
+EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from deepagents import create_deep_agent
+from utils import agent_response, delegation_trace
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Point the SDK at the same skills directory the CLI uses
+agent = create_deep_agent(
+    model=MODEL,
+    skills=["./skills/"],
+)
+
+result = agent.invoke({"messages": [("user",
+    "Explain what a Python decorator does, for a beginner."
+)]})
+
+print(delegation_trace(result))
+print(agent_response(result))
+----
+====
+
+. Run it:
++
+[source,role="execute"]
+----
+uv run skill_bridge.py
+----
++
+.Sample output (your results may vary)
+----
+=== Delegation Trace ===
+  Step 1: general-purpose (inherited)
+          Explain what a Python decorator does, at a beginner level...
+  Total: 1 delegation(s)
+
+A decorator is like a gift wrapper for functions...
+----
++
+The same `code-explainer` SKILL.md you tested in the CLI is now powering your Python application. Edit the skill in one place, both interfaces pick up the change.
+
+This is the key insight: **develop skills in the CLI** where the feedback loop is fast, **deploy them in code** where you need programmatic control. One skill format serves both.
+
+== Exercise 7: The Skill Development Workflow
+
+You've now experienced the full skill development loop. Here it is as a repeatable process:
+
+. **Write** a SKILL.md with frontmatter (name, description) and a markdown body (instructions).
+
+. **Test interactively** — launch the CLI, invoke with `/skill:name`, observe behavior.
+
+. **Iterate** — edit the SKILL.md in your editor, run `/reload` in the CLI, re-test. No restart needed.
+
+. **Test headlessly** — pipe input through `deepagents --skill name -n "task" -q` to verify non-interactive behavior.
+
+. **Use programmatically** — pass `skills=["./skills/"]` to `create_deep_agent()` in your Python code. Same files, same behavior.
+
+. **Share** — commit the `skills/` directory to git. Teammates get the skills by pulling.
+
+This workflow works for teams: one person writes and refines skills in the CLI, another consumes them programmatically in a production pipeline. The SKILL.md is the shared contract.
+
+TIP: For project-aware agents that auto-discover skills, subagents, and MCP tools from directory conventions — including a clone-and-go pattern — see xref:23-bonus-cli-projects.adoc[Bonus: CLI Project-Aware Agents].
+
+== Module Summary
+
+You've learned to use the CLI as a skill development tool:
+
+* **Skill anatomy** — SKILL.md with YAML frontmatter and markdown instructions
+* **Interactive testing** — `/skill:name` to invoke, `/reload` to pick up edits
+* **Iteration** — edit → reload → test in seconds, not minutes
+* **Headless mode** — same skills work with `-n` for scripting and piping
+* **Programmatic bridge** — `create_deep_agent(skills=["./skills/"])` uses the same files
+* **Dev workflow** — write in CLI, deploy in code, share via git
+
+Next, in xref:23-bonus-cli-projects.adoc[Part 2], you'll assemble skills, subagents, and MCP into a self-contained project anyone can clone and use immediately.
