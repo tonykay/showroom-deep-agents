@@ -1,0 +1,712 @@
+= Bonus: CLI Project-Aware Agents
+:source-highlighter: rouge
+
+In xref:22-bonus-cli-skills.adoc[Part 1] you built skills and tested them in the CLI. Now you'll assemble skills, subagents, and MCP configuration into a self-contained project that anyone can clone and use immediately.
+
+The Deep Agents CLI automatically discovers project configuration from directory conventions. No command-line flags, no environment variables — just the right files in the right places.
+
+== Exercise 1: The `.deepagents/` Directory
+
+The CLI looks for a `.deepagents/` directory in your project root. Everything inside it is loaded automatically when you launch the CLI from that directory.
+
+. Create the project structure:
++
+[source,role="execute"]
+----
+mkdir -p cli-project/.deepagents/agents/researcher
+mkdir -p cli-project/.deepagents/agents/analyst
+mkdir -p cli-project/.deepagents/skills
+----
+
+. Add project-level context:
++
+[source,role="execute"]
+----
+cat > cli-project/.deepagents/AGENTS.md << 'EOF'
+# Project Context
+
+This is a code analysis project. When working in this project:
+
+- Focus on Python code quality and best practices
+- Use the researcher subagent for gathering information
+- Use the analyst subagent for deep code analysis
+- Apply code-explainer and code-reviewer skills when appropriate
+EOF
+----
++
+This `AGENTS.md` is appended to the agent's system prompt every session. It gives the agent project-specific knowledge without you having to repeat it.
+
+. Verify the structure:
++
+[source,role="execute"]
+----
+find cli-project/.deepagents -type f
+----
++
+.Sample output (your results may vary)
+----
+cli-project/.deepagents/AGENTS.md
+----
++
+The CLI loads configuration in this order (later overrides earlier):
+
+[cols="1,2",options="header"]
+|===
+|Source |What it provides
+
+|`~/.deepagents/`
+|User-level: global skills, memories, default config
+
+|`.deepagents/`
+|Project-level: project skills, subagents, context
+
+|`.mcp.json`
+|MCP servers (project root, Claude Code compatible)
+|===
+
+Project-level configuration overrides user-level when names collide. This means a project can customize behavior without affecting your global setup.
+
+== Exercise 2: Subagents via AGENTS.md Files
+
+In xref:07-subagent-fundamentals.adoc[Module 7] and xref:08-yaml-subagents.adoc[Module 8], you defined subagents as Python dicts and YAML files. The CLI uses a third format: markdown AGENTS.md files with YAML frontmatter.
+
+Each subagent lives in its own directory under `.deepagents/agents/`. The directory name is the subagent's routing name.
+
+. Create a researcher subagent using Haiku for fast, cheap lookups:
++
+[source,role="execute"]
+----
+cat > cli-project/.deepagents/agents/researcher/AGENTS.md << 'EOF'
+---
+name: researcher
+description: Research topics and gather factual information. Use for quick lookups, definitions, and background research.
+model: anthropic:claude-haiku-4-5-20251001
+---
+
+You are a research assistant. Your job is to find and summarize information clearly.
+
+## Your Process
+1. Break down the question into searchable aspects
+2. Provide factual, well-organized information
+3. Keep responses concise — summaries, not essays
+4. Cite your reasoning when making claims
+EOF
+----
+
+. Create an analyst subagent using Sonnet for deep reasoning:
++
+[source,role="execute"]
+----
+cat > cli-project/.deepagents/agents/analyst/AGENTS.md << 'EOF'
+---
+name: analyst
+description: Perform deep analysis requiring critical thinking, trade-off evaluation, and nuanced reasoning. Use for complex questions.
+model: anthropic:claude-sonnet-4-6
+---
+
+You are an analytical expert. Your job is to provide thorough, multi-perspective analysis.
+
+## Your Process
+1. Consider the question from multiple angles
+2. Evaluate trade-offs explicitly
+3. Support conclusions with reasoning
+4. Acknowledge uncertainty where it exists
+EOF
+----
++
+Notice how the frontmatter maps directly to the programmatic subagent dict:
++
+[cols="1,1",options="header"]
+|===
+|AGENTS.md frontmatter |Python dict equivalent
+
+|`name: researcher`
+|`"name": "researcher"`
+
+|`description: Research topics...`
+|`"description": "Research topics..."`
+
+|`model: anthropic:claude-haiku-4-5-20251001`
+|`"model": "anthropic:claude-haiku-4-5-20251001"`
+
+|Markdown body
+|`"system_prompt": "You are a research assistant..."`
+|===
+
+. Launch the CLI from the project directory and test delegation:
++
+[source,role="execute"]
+----
+cd cli-project
+deepagents
+----
++
+----
+What is the CAP theorem? Keep it brief.
+----
++
+The agent should delegate to the `researcher` (Haiku) for this factual lookup.
++
+Now ask something that requires deeper analysis:
++
+----
+Should I use PostgreSQL or MongoDB for a new e-commerce platform? Consider scalability, team expertise, and data consistency.
+----
++
+This should route to `analyst` (Sonnet) for the complex trade-off evaluation.
+
+. Exit the CLI:
++
+----
+/exit
+----
+
+== Exercise 3: Model Cost Optimization
+
+Every delegation to the default `general-purpose` subagent uses your main agent's model. For routine tasks, that's wasteful. You can override it with a cheaper model.
+
+. Create a cost-optimized general-purpose subagent:
++
+[source,role="execute"]
+----
+mkdir -p .deepagents/agents/general-purpose
+cat > .deepagents/agents/general-purpose/AGENTS.md << 'EOF'
+---
+name: general-purpose
+description: General-purpose agent for research and multi-step tasks
+model: anthropic:claude-haiku-4-5-20251001
+---
+
+You are a general-purpose assistant. Complete tasks efficiently and return concise summaries. Do not include raw data or intermediate results — focus on the final answer.
+EOF
+----
++
+Now your agent team has three models in play:
++
+[cols="1,1,1",options="header"]
+|===
+|Subagent |Model |Purpose
+
+|Main agent
+|Sonnet (orchestration)
+|Decides what to delegate and integrates results
+
+|researcher
+|Haiku (fast/cheap)
+|Quick factual lookups
+
+|analyst
+|Sonnet (capable)
+|Deep reasoning and analysis
+
+|general-purpose
+|Haiku (fast/cheap)
+|Routine delegation — context isolation without cost
+|===
++
+This is the same model routing pattern from xref:07-subagent-fundamentals.adoc#exercise-5-model-routing[Module 7 Exercise 5], but configured entirely in markdown — no Python code.
+
+. Launch the CLI and test:
++
+[source,role="execute"]
+----
+deepagents
+----
++
+----
+Delegate to a subagent: calculate the factorial of 10 and explain it.
+----
++
+This routine task should route to `general-purpose` (Haiku) — fast and cheap. The analyst model is reserved for tasks that actually need it.
+
+. Exit the CLI:
++
+----
+/exit
+----
+
+== Exercise 4: Adding Project Skills
+
+Skills and subagents work together. Let's add the skills you built in xref:22-bonus-cli-skills.adoc[Part 1] to this project.
+
+. Copy the skills into the project's `.deepagents/skills/` directory:
++
+[source,role="execute"]
+----
+cp -r ../skills/code-explainer .deepagents/skills/
+cp -r ../skills/code-reviewer .deepagents/skills/
+----
+
+. Verify the project now has both subagents and skills:
++
+[source,role="execute"]
+----
+find .deepagents -name "*.md" | sort
+----
++
+.Sample output (your results may vary)
+----
+.deepagents/AGENTS.md
+.deepagents/agents/analyst/AGENTS.md
+.deepagents/agents/general-purpose/AGENTS.md
+.deepagents/agents/researcher/AGENTS.md
+.deepagents/skills/code-explainer/SKILL.md
+.deepagents/skills/code-reviewer/SKILL.md
+----
+
+. Launch the CLI and verify everything is discovered:
++
+[source,role="execute"]
+----
+deepagents skills list
+----
++
+.Sample output (your results may vary)
+----
+Available skills:
+  code-explainer - Explain code at a chosen level — beginner, intermediate, or expert
+  code-reviewer  - Review code for bugs, security issues, and improvements
+----
+
+. Test the combined setup — subagents and skills working together:
++
+[source,role="execute"]
+----
+deepagents
+----
++
+----
+Research what Python decorators are, then explain the concept for a beginner.
+----
++
+Watch the orchestration: the main agent may delegate research to the `researcher` subagent, then use the `code-explainer` skill to format the explanation. Skills and subagents complement each other — subagents handle delegation, skills handle specialized formatting.
+
+. Exit the CLI:
++
+----
+/exit
+----
+
+== Exercise 5: Project MCP Integration
+
+The CLI picks up MCP server configuration from `.mcp.json` in your project root — the same file Claude Code uses.
+
+. Add an MCP configuration:
++
+[source,role="execute"]
+----
+cat > .mcp.json << 'EOF'
+{
+  "mcpServers": {
+    "docs-langchain": {
+      "type": "http",
+      "url": "https://docs.langchain.com/mcp"
+    }
+  }
+}
+EOF
+----
++
+This adds the LangChain documentation server. When the agent needs to look up Deep Agents API details, it can query the docs directly.
+
+. Launch the CLI and verify MCP is loaded:
++
+[source,role="execute"]
+----
+deepagents
+----
++
+----
+/mcp
+----
++
+.Sample output (your results may vary)
+----
+Connected MCP servers:
+  docs-langchain (http) - https://docs.langchain.com/mcp
+----
+
+. Test it with a docs query:
++
+----
+What parameters does create_deep_agent() accept? Check the docs.
+----
++
+The agent can now query live documentation through MCP, in addition to using its subagents and skills.
+
+. Exit the CLI:
++
+----
+/exit
+----
++
+NOTE: The `.mcp.json` format is shared with Claude Code. If you already have one in your project for Claude Code, the Deep Agents CLI picks it up automatically — one config, two tools.
+
+== Exercise 6: Headless Project Workflows
+
+Everything you've assembled — subagents, skills, MCP — works in headless mode too. The project configuration is discovered automatically regardless of interactive or non-interactive mode.
+
+. Run a task that exercises the full project config:
++
+[source,role="execute"]
+----
+deepagents -n "Research what the Observer pattern is and explain it for a beginner" -q
+----
++
+The agent uses the project's researcher subagent and code-explainer skill — all discovered from `.deepagents/`, no flags needed.
+
+. Chain commands in a shell pipeline:
++
+[source,role="execute"]
+----
+cat sample_code.py | deepagents -n "Review this code, then explain the key issues for a beginner" -q > review_and_explain.txt
+cat review_and_explain.txt
+----
+
+. Script a multi-step workflow:
++
+[source,role="execute"]
+----
+cat > analyze.sh << 'SCRIPT'
+#!/bin/bash
+echo "=== Code Review ==="
+cat "$1" | deepagents --skill code-reviewer -n "review this code" -q
+
+echo ""
+echo "=== Beginner Explanation ==="
+cat "$1" | deepagents --skill code-explainer -n "explain for a beginner" -q
+SCRIPT
+chmod +x analyze.sh
+----
++
+[source,role="execute"]
+----
+./analyze.sh sample_code.py
+----
++
+No Python code, no SDK — just the CLI + project configuration + shell scripting. The project's `.deepagents/` directory makes the agent self-configuring.
+
+== Exercise 7: The Starter Repo
+
+Everything you've built can be packaged into a git repository that anyone can clone and use immediately. Let's verify the project is self-contained.
+
+. Review the complete project structure:
++
+[source,role="execute"]
+----
+find . -not -path './.git/*' -not -name '.git' | sort
+----
++
+.Sample output (your results may vary)
+----
+.
+./.deepagents
+./.deepagents/AGENTS.md
+./.deepagents/agents
+./.deepagents/agents/analyst/AGENTS.md
+./.deepagents/agents/general-purpose/AGENTS.md
+./.deepagents/agents/researcher/AGENTS.md
+./.deepagents/skills
+./.deepagents/skills/code-explainer/SKILL.md
+./.deepagents/skills/code-reviewer/SKILL.md
+./.mcp.json
+----
+
+. Initialize it as a git repository:
++
+[source,role="execute"]
+----
+git init
+git add .
+git commit -m "Initial commit: project-aware agent with skills and subagents"
+----
++
+This is now a shareable, clonable agent project. Anyone with the Deep Agents CLI installed can:
++
+[source,bash]
+----
+git clone <your-repo-url>
+cd <repo-name>
+deepagents
+----
++
+And immediately have a working agent with:
++
+* Three subagents (researcher/Haiku, analyst/Sonnet, general-purpose/Haiku)
+* Two skills (code-explainer, code-reviewer)
+* MCP documentation access
+* Project context via AGENTS.md
+
+. Make it your own — modify a subagent's model:
++
+[source,role="execute"]
+----
+cat > .deepagents/agents/researcher/AGENTS.md << 'EOF'
+---
+name: researcher
+description: Research topics and gather factual information. Use for quick lookups, definitions, and background research.
+model: anthropic:claude-sonnet-4-6
+---
+
+You are a research assistant. Your job is to find and summarize information clearly.
+
+## Your Process
+1. Break down the question into searchable aspects
+2. Provide factual, well-organized information
+3. Keep responses concise — summaries, not essays
+4. Cite your reasoning when making claims
+EOF
+----
++
+The researcher now uses Sonnet instead of Haiku. Test it:
++
+[source,role="execute"]
+----
+deepagents -n "What is the difference between concurrency and parallelism?" -q
+----
++
+One file edit, no code changes, no redeployment. This is the power of the project-aware pattern.
+
+== Exercise 8: Programmatic Equivalence
+
+The CLI and SDK can share the same project configuration. Let's load the `.deepagents/` directory structure from Python.
+
+. Create a loader for AGENTS.md subagent files:
++
+[tabs]
+====
+Run::
++
+[source,role="execute"]
+----
+cat > load_agents_md.py << 'EOF'
+import os
+import re
+from pathlib import Path
+
+
+def load_agents_md(agents_dir: Path) -> list:
+    """Load subagent definitions from AGENTS.md files.
+
+    Each subdirectory in agents_dir should contain an AGENTS.md
+    with YAML frontmatter (name, description, model) and a
+    markdown body (system_prompt).
+
+    Same env var override as the YAML loader:
+    {NAME}_MODEL overrides the frontmatter model.
+    """
+    subagents = []
+    for agent_dir in sorted(agents_dir.iterdir()):
+        agents_md = agent_dir / "AGENTS.md"
+        if not agents_md.is_file():
+            continue
+
+        text = agents_md.read_text()
+
+        # Parse YAML frontmatter between --- markers
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n(.*)', text, re.DOTALL)
+        if not match:
+            continue
+
+        frontmatter, body = match.groups()
+
+        # Simple YAML parsing for flat key: value pairs
+        meta = {}
+        for line in frontmatter.strip().splitlines():
+            if ':' in line:
+                key, val = line.split(':', 1)
+                meta[key.strip()] = val.strip()
+
+        name = meta.get("name", agent_dir.name)
+        subagent = {
+            "name": name,
+            "description": meta.get("description", ""),
+            "system_prompt": body.strip(),
+        }
+
+        # Model: env var override, then frontmatter, then inherit
+        env_key = f"{name.upper().replace('-', '_')}_MODEL"
+        model = os.environ.get(env_key, meta.get("model"))
+        if model:
+            subagent["model"] = model
+
+        subagents.append(subagent)
+
+    return subagents
+EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+import re
+from pathlib import Path
+
+
+def load_agents_md(agents_dir: Path) -> list:
+    """Load subagent definitions from AGENTS.md files.
+
+    Each subdirectory in agents_dir should contain an AGENTS.md
+    with YAML frontmatter (name, description, model) and a
+    markdown body (system_prompt).
+
+    Same env var override as the YAML loader:
+    {NAME}_MODEL overrides the frontmatter model.
+    """
+    subagents = []
+    for agent_dir in sorted(agents_dir.iterdir()):
+        agents_md = agent_dir / "AGENTS.md"
+        if not agents_md.is_file():
+            continue
+
+        text = agents_md.read_text()
+
+        # Parse YAML frontmatter between --- markers
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n(.*)', text, re.DOTALL)
+        if not match:
+            continue
+
+        frontmatter, body = match.groups()
+
+        # Simple YAML parsing for flat key: value pairs
+        meta = {}
+        for line in frontmatter.strip().splitlines():
+            if ':' in line:
+                key, val = line.split(':', 1)
+                meta[key.strip()] = val.strip()
+
+        name = meta.get("name", agent_dir.name)
+        subagent = {
+            "name": name,
+            "description": meta.get("description", ""),
+            "system_prompt": body.strip(),
+        }
+
+        # Model: env var override, then frontmatter, then inherit
+        env_key = f"{name.upper().replace('-', '_')}_MODEL"
+        model = os.environ.get(env_key, meta.get("model"))
+        if model:
+            subagent["model"] = model
+
+        subagents.append(subagent)
+
+    return subagents
+----
+====
+
+. Create a script that loads the full project config programmatically:
++
+[tabs]
+====
+Run::
++
+[source,role="execute"]
+----
+cat > project_agent.py << 'EOF'
+import os
+from pathlib import Path
+from deepagents import create_deep_agent
+from load_agents_md import load_agents_md
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Load subagents from .deepagents/agents/ AGENTS.md files
+subagents = load_agents_md(Path(".deepagents/agents"))
+
+# Load skills from .deepagents/skills/
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=subagents,
+    skills=[".deepagents/skills/"],
+)
+
+print(f"Loaded {len(subagents)} subagents:")
+for sa in subagents:
+    print(f"  {sa['name']} ({sa.get('model', 'inherited')})")
+
+result = agent.invoke({"messages": [("user",
+    "Research the Observer design pattern, then explain it for a beginner."
+)]})
+
+from utils import agent_response, delegation_trace
+print(delegation_trace(result, subagents=subagents))
+print(agent_response(result))
+EOF
+----
+
+Code Preview::
++
+[source,python]
+----
+import os
+from pathlib import Path
+from deepagents import create_deep_agent
+from load_agents_md import load_agents_md
+
+MODEL = os.environ.get("DEEPAGENTS_MODEL", "anthropic:claude-sonnet-4-6")
+
+# Load subagents from .deepagents/agents/ AGENTS.md files
+subagents = load_agents_md(Path(".deepagents/agents"))
+
+# Load skills from .deepagents/skills/
+agent = create_deep_agent(
+    model=MODEL,
+    subagents=subagents,
+    skills=[".deepagents/skills/"],
+)
+
+print(f"Loaded {len(subagents)} subagents:")
+for sa in subagents:
+    print(f"  {sa['name']} ({sa.get('model', 'inherited')})")
+
+result = agent.invoke({"messages": [("user",
+    "Research the Observer design pattern, then explain it for a beginner."
+)]})
+
+from utils import agent_response, delegation_trace
+print(delegation_trace(result, subagents=subagents))
+print(agent_response(result))
+----
+====
+
+. Copy `utils.py` into the project and run:
++
+[source,role="execute"]
+----
+cp ../utils.py .
+uv run project_agent.py
+----
++
+.Sample output (your results may vary)
+----
+Loaded 3 subagents:
+  analyst (anthropic:claude-sonnet-4-6)
+  general-purpose (anthropic:claude-haiku-4-5-20251001)
+  researcher (anthropic:claude-sonnet-4-6)
+
+=== Delegation Trace ===
+  Step 1: researcher (anthropic:claude-sonnet-4-6)
+          Research the Observer design pattern: definition, use cases, examples...
+  Total: 1 delegation(s)
+
+The Observer pattern is like a newsletter subscription...
+----
++
+The CLI and SDK are two faces of the same system. The CLI auto-discovers `.deepagents/` — the SDK needs explicit paths. But the configuration files are identical. Develop interactively in the CLI, deploy programmatically with the SDK.
+
+== Module Summary
+
+You've built a complete project-aware agent system:
+
+* **`.deepagents/` directory** — project-level configuration auto-discovered by the CLI
+* **AGENTS.md subagents** — markdown-based subagent definitions with model routing
+* **Cost optimization** — different models per subagent (Haiku for routine, Sonnet for analysis)
+* **Skills + subagents** — complementary capabilities that work together
+* **MCP integration** — `.mcp.json` shared with Claude Code
+* **Headless workflows** — same project config works in scripts and pipelines
+* **Clone-and-go** — share agent projects via git, onboard via `git clone && deepagents`
+* **Programmatic equivalence** — `load_agents_md()` bridges CLI config to SDK code
+
+The key takeaway: **agent projects are portable**. Package your skills, subagents, and configuration into a git repository. Anyone can clone it and have a working agent — whether they prefer the CLI or the SDK.
