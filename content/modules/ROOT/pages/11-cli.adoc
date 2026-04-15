@@ -208,6 +208,8 @@ Watch how the agent:
 +
 This workflow demonstrates the CLI as more than a quick demo tool — it's a full-featured agent environment that can assist with real development tasks.
 
+TIP: For advanced CLI usage — skill development workflows, project-aware agents with model routing, and the clone-and-go pattern — see xref:22-bonus-cli-skills.adoc[Bonus: CLI Skills Development] and xref:23-bonus-cli-projects.adoc[Bonus: CLI Project-Aware Agents].
+
 == Module summary
 
 The Deep Agents CLI provides a rich interactive environment for working with agents:
