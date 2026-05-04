@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "showroom_deep_agents",
+  "project_id": "af8711c0-bb13-45fe-a8b4-a1b9ccdbfd96"
+}

@@ -40,3 +40,8 @@ yarn.lock
 # Localroom generated files
 .localroom-ui.html
 .pids/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
