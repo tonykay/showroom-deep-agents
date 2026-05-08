@@ -1,34 +1,36 @@
-= Showroom Template
+= Deep Agents: From First Agent to Production Multi-Agent Systems
 
-A template for creating Red Hat Showroom lab guides and demo content, built with https://antora.org[Antora].
+A zero-to-hero workshop on https://github.com/langchain-ai/deepagents[LangChain Deep Agents], covering the Python SDK, CLI, and production deployment patterns. Built with https://antora.org[Antora] on the https://github.com/rhpds/showroom_template_nookbag[Showroom template] for Red Hat Demo Platform.
 
-* 0% cruft
-* Red Hat Demo Platform UI Bundle default
-* Dev Mode extension that displays the asciidoc attributes you have to work with
+== What You'll Learn
 
-== Documentation
+* Build agents with `create_deep_agent()` — system prompts, planning, filesystem tools
+* Define subagents for context isolation and model routing
+* Create skills (SKILL.md) for progressive-disclosure capabilities
+* Use AGENTS.md for persistent memory and project context
+* Work with the Deep Agents CLI — interactive TUI and headless scripting
+* Deploy agents with containers and Kubernetes/OpenShift
 
-Full documentation — getting started, content structure, configuration, local development, and AI-assisted content creation — is available at:
+== Workshop Structure
 
-https://rhpds.github.io/showroom_template_nookbag/
+The workshop progresses through foundations, multi-agent systems, and a capstone, with bonus modules for deeper exploration:
 
-== Quick Start
+* **Foundations** — first agent, system prompts, filesystem backends, custom tools
+* **Multi-Agent Systems** — subagents, YAML loader pattern, skills, memory
+* **CLI & Capstone** — Deep Agents CLI, AIOps team capstone project
+* **Bonus Modules** — LangFuse tracing, containers, OpenShift, JupyterLab, Claude Code, MCP, security, CLI skills development, project-aware agents
 
-. https://github.com/rhpds/showroom_template_nookbag/generate[Create a repo from this template] (suggested naming: `<lab-name>-showroom`)
-. Clone your new repo and preview locally:
-+
+== Live Site
+
+https://tonykay.github.io/showroom-deep-agents/
+
+== Local Preview
+
 [source,sh]
 ----
 podman run --rm --name antora -v $PWD:/antora -p 8080:8080 -i -t ghcr.io/juliaaano/antora-viewer
 ----
-+
+
 On SELinux systems, append `:z` to the volume mount.
 
-. Edit content in `content/modules/ROOT/pages/`
-. See the https://rhpds.github.io/showroom_template_nookbag/modules/content-repo.html[Content Repository] docs for directory layout, Podman Compose with live reload, dev mode, and more.
-
-== Create Content with AI
-
-The https://github.com/rhpds/rhdp-skills-marketplace[RHDP Skills Marketplace] provides skills for Cursor IDE and Claude Code that generate labs, demos, and validate content against Red Hat standards.
-
-See the https://rhpds.github.io/showroom_template_nookbag/modules/content-repo.html#_creating_content_with_ai_tools[AI Tools documentation] for details.
+Content lives in `content/modules/ROOT/pages/`. Site config is in `site.yml`. GitHub Pages auto-deploys on push to main.
